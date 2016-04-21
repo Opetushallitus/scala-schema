@@ -68,3 +68,29 @@ case class ReadOnlyCat(
 ```
 
 More examples and a pretty much full feature list can be found in this [test file](src/test/scala/fi/oph/scalaschema/JsonSchemaTest.scala).
+
+### Maven
+
+Add Jitpack.io as a repository:
+
+```xml
+<repositories>
+  ...
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+</repositories>
+
+Then add scala-schema as dependency
+
+```xml
+<dependencies>
+  ...
+  <dependency>
+    <groupId>com.github.Opetushallitus</groupId>
+    <artifactId>scala-schema</artifactId>
+    <version>1.0</version>
+  </dependency>
+</dependencies>
+```
