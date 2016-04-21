@@ -1,6 +1,6 @@
 ## scala-schema
 
-Generate a JSON schema from Scala classes. 
+Generate a [JSON schema](http://json-schema.org/) from Scala classes. 
 
 - Create schema from any case class
 - Supports case classes, lists, strings, dates, numbers, booleans
