@@ -4,16 +4,15 @@ import org.json4s.ext.JodaTimeSerializers
 import org.json4s.{DefaultFormats, Formats, Extraction}
 import org.json4s.JsonAST._
 
-object JsonFormats {
-  val genericFormats: Formats =  new DefaultFormats {
+object SchemaToJson {
+  private implicit val jsonFormats: Formats = new DefaultFormats {
     override def dateFormatter = {
       val format = super.dateFormatter
       format.setTimeZone(DefaultFormats.UTC)
       format
     }
   } ++ JodaTimeSerializers.all
-}
-object SchemaToJson {
+
   def toJsonSchema(t: Schema)(implicit ms: List[JsonMetadataSupport[_]]): JValue = t match {
     case DateSchema(enumValues) => JObject(List("type" -> JString("string"), "format" -> JString("date")) ++ toEnumValueProperty(enumValues))
     case StringSchema(enumValues) => withMinLength(simpleObjectToJson("string", enumValues), Some(1))
@@ -56,7 +55,6 @@ object SchemaToJson {
   }
 
   private def toEnumValueProperty(enumValues: Option[List[Any]]): Option[(String, JValue)] = {
-    implicit val formats = JsonFormats.genericFormats
     enumValues.map(enumValues => ("enum", Extraction.decompose(enumValues)))
   }
 

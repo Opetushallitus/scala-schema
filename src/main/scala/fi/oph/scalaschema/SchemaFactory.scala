@@ -15,7 +15,7 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]]) {
     tyep
   }
 
-  case class ScanState(root: Boolean = true, foundTypes: collection.mutable.Set[String] = collection.mutable.Set.empty, createdTypes: collection.mutable.Set[SchemaWithClassName] = collection.mutable.Set.empty) {
+  private case class ScanState(root: Boolean = true, foundTypes: collection.mutable.Set[String] = collection.mutable.Set.empty, createdTypes: collection.mutable.Set[SchemaWithClassName] = collection.mutable.Set.empty) {
     def childState = copy(root = false)
   }
 
@@ -55,7 +55,7 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]]) {
     "scala.Float" -> NumberSchema()
   )
 
-  def addToState(tyep: SchemaWithClassName, state: ScanState) = {
+  private def addToState(tyep: SchemaWithClassName, state: ScanState) = {
     state.createdTypes.add(tyep)
     tyep
   }
@@ -95,7 +95,7 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]]) {
     }
   }
 
-  def findTraits(tpe: ru.Type) = {
+  private def findTraits(tpe: ru.Type) = {
     tpe.baseClasses
       .map(_.fullName)
       .filter(!List("scala.Any").contains(_))
@@ -131,7 +131,7 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]]) {
   }
 }
 
-object TraitImplementationFinder {
+private object TraitImplementationFinder {
   import collection.JavaConverters._
   val cache: collection.mutable.Map[String, Set[Class[_]]] = collection.mutable.Map.empty
   val reflectionsCache: collection.mutable.Map[String, Reflections] = collection.mutable.Map.empty
