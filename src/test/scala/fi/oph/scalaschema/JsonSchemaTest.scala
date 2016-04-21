@@ -6,9 +6,7 @@ import org.json4s.jackson._
 import org.scalatest.{FreeSpec, Matchers}
 
 class JsonSchemaTest extends FreeSpec with Matchers {
-  implicit val metadataSupport: List[MetadataSupport[_]] = List()
-  private val factory: SchemaFactory = SchemaFactory(metadataSupport)
-  val schema = factory.createSchema(classOf[TestClass])
+  val schema = SchemaFactory.default.createSchema(classOf[TestClass])
 
   "Simple example" - {
     "Schema object model generation" in {
@@ -18,7 +16,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       ))
     }
     "JSON schema generation" in {
-      JsonMethods.compact(SchemaToJson.toJsonSchema(schema)) should equal("""{"type":"object","properties":{"name":{"type":"string","minLength":1},"stuff":{"type":"array","items":{"type":"number"}}},"id":"#testclass","additionalProperties":false,"title":"Test class","required":["name","stuff"]}""")
+      JsonMethods.compact(schema.toJson) should equal("""{"type":"object","properties":{"name":{"type":"string","minLength":1},"stuff":{"type":"array","items":{"type":"number"}}},"id":"#testclass","additionalProperties":false,"title":"Test class","required":["name","stuff"]}""")
     }
   }
 
@@ -54,8 +52,8 @@ class JsonSchemaTest extends FreeSpec with Matchers {
     }
   }
 
-  def jsonSchemaOf(c: Class[_]) = JsonMethods.compact(SchemaToJson.toJsonSchema((factory.createSchema(c))))
-  def jsonSchemaPropertiesOf(c: Class[_]) = JsonMethods.compact(SchemaToJson.toJsonSchema((factory.createSchema(c))) \\ "properties")
+  def jsonSchemaOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson)
+  def jsonSchemaPropertiesOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson \\ "properties")
 }
 
 case class RequiredFields(field: Boolean)

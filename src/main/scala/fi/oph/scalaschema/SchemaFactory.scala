@@ -5,6 +5,10 @@ import org.reflections.Reflections
 
 import scala.reflect.runtime.{universe => ru}
 
+object SchemaFactory {
+  lazy val default = SchemaFactory()
+}
+
 case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil) {
   def createSchema(className: String): SchemaWithClassName = {
     createSchema(typeByName(className), ScanState()).asInstanceOf[SchemaWithClassName]

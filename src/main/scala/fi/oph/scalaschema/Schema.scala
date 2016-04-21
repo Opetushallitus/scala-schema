@@ -1,8 +1,12 @@
 package fi.oph.scalaschema
 
+import org.json4s.JsonAST.JValue
+
 sealed trait Schema {
   def metadata: List[Metadata] = Nil
   def mapItems(f: ElementSchema => ElementSchema): Schema
+  def toJson: JValue = SchemaToJson.toJsonSchema(this)(Nil)
+  def toJson(ms: List[JsonMetadataSupport[_]]): JValue = SchemaToJson.toJsonSchema(this)(ms)
 }
 
 case class OptionalSchema(itemSchema: Schema) extends Schema {
