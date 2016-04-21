@@ -81,6 +81,7 @@ Add Jitpack.io as a repository:
     <url>https://jitpack.io</url>
   </repository>
 </repositories>
+```
 
 Then add scala-schema as dependency
 
