@@ -5,9 +5,13 @@ import org.reflections.Reflections
 
 import scala.reflect.runtime.{universe => ru}
 
-case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]]) {
+case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil) {
   def createSchema(className: String): SchemaWithClassName = {
     createSchema(typeByName(className), ScanState()).asInstanceOf[SchemaWithClassName]
+  }
+
+  def createSchema(clazz: Class[_]): SchemaWithClassName = {
+    createSchema(clazz.getName)
   }
 
   private def typeByName(className: String): ru.Type = {
@@ -133,10 +137,10 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]]) {
 
 private object TraitImplementationFinder {
   import collection.JavaConverters._
-  val cache: collection.mutable.Map[String, Set[Class[_]]] = collection.mutable.Map.empty
+  val cache: collection.mutable.Map[String, List[Class[_]]] = collection.mutable.Map.empty
   val reflectionsCache: collection.mutable.Map[String, Reflections] = collection.mutable.Map.empty
 
-  def findTraitImplementations(tpe: ru.Type): Set[Class[_]] = this.synchronized {
+  def findTraitImplementations(tpe: ru.Type): List[Class[_]] = this.synchronized {
     val className: String = tpe.typeSymbol.asClass.fullName
 
     cache.getOrElseUpdate(className, {
@@ -144,7 +148,7 @@ private object TraitImplementationFinder {
       val reflections = reflectionsCache.getOrElseUpdate(javaClass.getPackage.getName, new Reflections(javaClass.getPackage.getName))
 
       val implementationClasses = reflections.getSubTypesOf(javaClass).asScala.toSet.asInstanceOf[Set[Class[_]]].filter(!_.isInterface)
-      implementationClasses
+      implementationClasses.toList.sortBy(_.getName)
     })
   }
 }

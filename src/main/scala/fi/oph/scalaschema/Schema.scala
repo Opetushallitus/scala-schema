@@ -21,7 +21,7 @@ case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchem
 case class StringSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class NumberSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
-case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil)
+case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil)
                        extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassSchema] {
   override def getSchema(className: String): Option[SchemaWithClassName] = {
     if (className == this.fullClassName) {
@@ -60,6 +60,6 @@ trait SchemaWithClassName extends Schema {
   }
 }
 
-case class Property(key: String, schema: Schema, metadata: List[Metadata]) extends ObjectWithMetadata[Property] {
+case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil) extends ObjectWithMetadata[Property] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
 }
