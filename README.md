@@ -35,7 +35,7 @@ You can use annotations to add a description and set some constraints, like this
 import fi.oph.scalaschema.annotation.{MaxValue, MinValue, Description}
 
 @Description("A cat")
-case class AnotatedCat(
+case class AnnotatedCat(
   @MinValue(3) @MaxValue(4)
   feet: Int,
   @RegularExpression(".*")
