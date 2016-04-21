@@ -57,7 +57,7 @@ trait JsonMetadataSupport[M] {
   }
   def appendToDescription(obj: JObject, newDescription: String): JsonAST.JObject = {
     val description = obj.\("description") match {
-      case JString(s) => s + ".\n" + newDescription
+      case JString(s) => s + ". " + newDescription
       case JNothing => newDescription
     }
     obj.merge(JObject("description" -> JString(description)))

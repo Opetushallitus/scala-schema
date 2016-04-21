@@ -6,7 +6,7 @@ import org.json4s.JsonAST.{JObject, JString}
 object RegularExpression extends MetadataSupport[RegularExpression] {
   override def metadataClass = classOf[RegularExpression]
 
-  override def appendMetadataToJsonSchema(obj: JObject, metadata: RegularExpression) = appendToDescription(obj.merge(JObject("pattern" -> JString(metadata.pattern))), "(Muoto: " + metadata.pattern + ")")
+  override def appendMetadataToJsonSchema(obj: JObject, metadata: RegularExpression) = appendToDescription(obj.merge(JObject("pattern" -> JString(metadata.pattern))), "(Format: " + metadata.pattern + ")")
 }
 
 case class RegularExpression(pattern: String) extends Metadata

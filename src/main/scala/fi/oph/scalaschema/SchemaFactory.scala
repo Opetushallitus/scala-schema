@@ -1,12 +1,14 @@
 package fi.oph.scalaschema
 
+import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
 
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
-  lazy val default = SchemaFactory()
+  val defaultAnnotations: List[MetadataSupport[_]] = List(Description, MaxItems, MinItems, MaxValue, MinValue, RegularExpression)
+  lazy val default = SchemaFactory(defaultAnnotations)
 }
 
 case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil) {
