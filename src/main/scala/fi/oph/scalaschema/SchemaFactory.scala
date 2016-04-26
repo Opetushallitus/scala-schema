@@ -3,6 +3,7 @@ package fi.oph.scalaschema
 import java.lang
 import java.lang.reflect.Constructor
 import fi.oph.scalaschema.Annotations.findAnnotations
+import fi.oph.scalaschema.Types.typeByName
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
@@ -23,10 +24,6 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     createSchema(clazz.getName)
   }
 
-  private def typeByName(className: String): ru.Type = {
-    val tyep: ru.Type = reflect.runtime.currentMirror.classSymbol(Class.forName(className)).toType
-    tyep
-  }
 
   private case class ScanState(root: Boolean = true, foundTypes: collection.mutable.Set[String] = collection.mutable.Set.empty, createdTypes: collection.mutable.Set[SchemaWithClassName] = collection.mutable.Set.empty) {
     def childState = copy(root = false)
@@ -158,7 +155,18 @@ private object TraitImplementationFinder {
   }
 }
 
+object Types {
+  def typeByName(className: String): ru.Type = {
+    val tyep: ru.Type = reflect.runtime.currentMirror.classSymbol(Class.forName(className)).toType
+    tyep
+  }
+}
+
 object Annotations {
+  def findAnnotations(k: Class[_], annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
+    findAnnotations(typeByName(k.getName).typeSymbol, annotationsSupported)
+  }
+
   def findAnnotations(symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
     symbol.annotations.flatMap { annotation =>
       val annotationType: String = annotation.tree.tpe.toString
