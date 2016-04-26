@@ -159,7 +159,7 @@ private object TraitImplementationFinder {
 }
 
 object Annotations {
-  def findAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
+  def findAnnotations(symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
     symbol.annotations.flatMap { annotation =>
       val annotationType: String = annotation.tree.tpe.toString
       annotationsSupported.find(_.getName == annotationType) map { annotationClass =>
