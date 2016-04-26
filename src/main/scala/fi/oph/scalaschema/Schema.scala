@@ -67,6 +67,8 @@ trait SchemaWithClassName extends Schema {
   private def simpleClassName = {
     fullClassName.split("\\.").toList.last
   }
+
+  def appliesToClass(k: Class[_]) = k.getName == fullClassName
 }
 
 case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil) extends ObjectWithMetadata[Property] {
