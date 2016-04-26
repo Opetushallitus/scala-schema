@@ -1,12 +1,8 @@
 package fi.oph.scalaschema.annotation
 
-import fi.oph.scalaschema.{Metadata, MetadataSupport}
+import fi.oph.scalaschema.Metadata
 import org.json4s.JsonAST.{JObject, JString}
 
-object RegularExpression extends MetadataSupport[RegularExpression] {
-  override def metadataClass = classOf[RegularExpression]
-
-  override def appendMetadataToJsonSchema(obj: JObject, metadata: RegularExpression) = appendToDescription(obj.merge(JObject("pattern" -> JString(metadata.pattern))), "(Format: " + metadata.pattern + ")")
+case class RegularExpression(pattern: String) extends Metadata {
+  override def appendMetadataToJsonSchema(obj: JObject) = appendToDescription(obj.merge(JObject("pattern" -> JString(pattern))), "(Format: " + pattern + ")")
 }
-
-case class RegularExpression(pattern: String) extends Metadata

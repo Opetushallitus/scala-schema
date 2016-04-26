@@ -5,8 +5,7 @@ import org.json4s.JsonAST.JValue
 sealed trait Schema {
   def metadata: List[Metadata] = Nil
   def mapItems(f: ElementSchema => ElementSchema): Schema
-  def toJson: JValue = SchemaToJson.toJsonSchema(this)(SchemaFactory.defaultAnnotations)
-  def toJson(ms: List[JsonMetadataSupport[_]]): JValue = SchemaToJson.toJsonSchema(this)(ms)
+  def toJson: JValue = SchemaToJson.toJsonSchema(this)
 }
 
 case class OptionalSchema(itemSchema: Schema) extends Schema {

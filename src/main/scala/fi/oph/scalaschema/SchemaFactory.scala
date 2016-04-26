@@ -1,17 +1,20 @@
 package fi.oph.scalaschema
 
+import java.lang
+import java.lang.reflect.Constructor
+import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
-
+import scala.annotation.StaticAnnotation
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
-  val defaultAnnotations: List[MetadataSupport[_]] = List(Description, MaxItems, MinItems, MaxValue, MinValue, RegularExpression)
+  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[RegularExpression])
   lazy val default = SchemaFactory(defaultAnnotations)
 }
 
-case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil) {
+case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil) {
   def createSchema(className: String): SchemaWithClassName = {
     createSchema(typeByName(className), ScanState()).asInstanceOf[SchemaWithClassName]
   }
@@ -74,7 +77,7 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil)
     val traits = findTraits(tpe)
 
     val className: String = tpe.typeSymbol.fullName
-    def ref: ClassRefSchema = applyAnnotations(tpe.typeSymbol, ClassRefSchema(className, Nil))
+    def ref: ClassRefSchema = applyMetadataAnnotations(tpe.typeSymbol, ClassRefSchema(className, Nil))
     if (!state.foundTypes.contains(className)) {
       state.foundTypes.add(className)
 
@@ -83,21 +86,21 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil)
         val term = paramSymbol.asTerm
         val termType = createSchema(term.typeSignature, state.childState)
         val termName: String = term.name.decoded.trim
-        val property = applyAnnotations(term, Property(termName, termType, Nil))
+        val property = applyMetadataAnnotations(term, Property(termName, termType, Nil))
         val matchingMethodsFromTraits = traits.flatMap (_.members
           .filter(_.isMethod)
           .filter(_.asTerm.asMethod.name.toString == termName )
         ).map(_.asTerm).distinct
         matchingMethodsFromTraits.foldLeft(property) { (property, traitMethod) =>
-          applyAnnotations(traitMethod, property)
+          applyMetadataAnnotations(traitMethod, property)
         }
       }.toList
 
       if (state.root) {
         val classTypeDefinitions = state.createdTypes.toList
-        applyAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil, classTypeDefinitions.sortBy(_.simpleName)))
+        applyMetadataAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil, classTypeDefinitions.sortBy(_.simpleName)))
       } else {
-        addToState(applyAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil)), state)
+        addToState(applyMetadataAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil)), state)
         ref
       }
     } else {
@@ -113,13 +116,9 @@ case class SchemaFactory(annotationsSupported: List[AnnotationSupport[_]] = Nil)
       .filter {_.typeSymbol.asClass.isTrait}
   }
 
-  private def applyAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
-    symbol.annotations.flatMap(annotation => annotationsSupported.map((annotation, _))).foldLeft(x) { case (current, (annotation, metadataSupport)) =>
-
-      val annotationParams: List[String] = annotation.tree.children.tail.map(str => StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", "")))
-      val annotationType: String = annotation.tree.tpe.toString
-
-      metadataSupport.applyAnnotations(annotationType, annotationParams, current, this).asInstanceOf[T]
+  private def applyMetadataAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
+    findAnnotations(symbol, annotationsSupported).asInstanceOf[List[Metadata]].foldLeft(x) {
+      case (current: T, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
     }
   }
 
@@ -157,4 +156,34 @@ private object TraitImplementationFinder {
       implementationClasses.toList.sortBy(_.getName)
     })
   }
+}
+
+object Annotations {
+  def findAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
+    symbol.annotations.flatMap { annotation =>
+      val annotationType: String = annotation.tree.tpe.toString
+      annotationsSupported.find(_.getName == annotationType) map { annotationClass =>
+        val annotationParams: List[String] = annotation.tree.children.tail.map(str => StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", "")))
+        Annotations.parseAnnotation(annotationClass, annotationParams)
+      }
+    }
+  }
+
+  private def parseAnnotation(annotationClass: Class[_ <: StaticAnnotation], params: List[String]): StaticAnnotation = {
+    val StringClass = classOf[String]
+    val DoubleClass = classOf[Double]
+    val IntegerClass = classOf[Int]
+
+    val constructor: Constructor[_] = annotationClass.getConstructors()(0)
+    val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex.map {
+      case (StringClass, index) => params(index)
+      case (DoubleClass, index) => new lang.Double(params(index).toDouble)
+      case (IntegerClass, index) => new lang.Integer(params(index).toDouble.toInt)
+      case (tyep, _) =>
+        // Only a handful of types supported at the moment
+        throw new IllegalArgumentException("Argument type not supported: " + tyep)
+    }
+    constructor.newInstance(constructorParams:_*).asInstanceOf[StaticAnnotation]
+  }
+
 }

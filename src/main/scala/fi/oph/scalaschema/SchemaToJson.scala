@@ -13,7 +13,7 @@ object SchemaToJson {
     }
   } ++ JodaTimeSerializers.all
 
-  def toJsonSchema(t: Schema)(implicit ms: List[JsonMetadataSupport[_]]): JValue = t match {
+  def toJsonSchema(t: Schema): JValue = t match {
     case DateSchema(enumValues) => JObject(List("type" -> JString("string"), "format" -> JString("date")) ++ toEnumValueProperty(enumValues))
     case StringSchema(enumValues) => withMinLength(simpleObjectToJson("string", enumValues), Some(1))
     case BooleanSchema(enumValues) => simpleObjectToJson("boolean", enumValues)
@@ -58,7 +58,7 @@ object SchemaToJson {
     enumValues.map(enumValues => ("enum", Extraction.decompose(enumValues)))
   }
 
-  private def toJsonProperties(properties: List[Property])(implicit ms: List[JsonMetadataSupport[_]]): JValue = {
+  private def toJsonProperties(properties: List[Property]): JValue = {
     JObject(properties.map { property =>
         (property.key, appendMetadata(toJsonSchema(property.schema).asInstanceOf[JObject], property.metadata))
     })
@@ -71,7 +71,7 @@ object SchemaToJson {
     }
   }
 
-  private def toDefinitionProperty(definitions: List[SchemaWithClassName])(implicit ms: List[JsonMetadataSupport[_]]): Option[(String, JValue)] = definitions.flatMap {
+  private def toDefinitionProperty(definitions: List[SchemaWithClassName]): Option[(String, JValue)] = definitions.flatMap {
     case x: ClassSchema => List(x)
     case _ => Nil
   } match {
@@ -80,11 +80,9 @@ object SchemaToJson {
       Some("definitions", JObject(definitions.map(definition => (definition.simpleName, toJsonSchema(definition)))))
   }
 
-  private def appendMetadata(obj: JObject, metadata: List[Metadata])(implicit ms: List[JsonMetadataSupport[_]]): JObject = {
+  private def appendMetadata(obj: JObject, metadata: List[Metadata]): JObject = {
     metadata.foldLeft(obj) { case (obj: JObject, metadata) =>
-      ms.foldLeft(obj) { case (obj, metadataSupport) =>
-        metadataSupport.appendMetadataToJsonSchema(obj, metadata)
-      }
+      metadata.appendMetadataToJsonSchema(obj)
     }
   }
 }
