@@ -105,10 +105,10 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
             None
         }
         val property = applyMetadataAnnotations(term, Property(termName, termType, Nil))
-        val otherTraits = traits.filterNot(t => ownerTrait.map(_.fullName).contains(t.typeSymbol.fullName)) // deduplicate traits, in case this property is a trait method
-        val matchingMethodsFromTraits = otherTraits.flatMap (_.members
+        val matchingMethodsFromTraits = traits.flatMap (_.members
           .filter(_.isMethod)
           .filter(_.asTerm.asMethod.name.toString == termName )
+          .filterNot(method => ownerTrait.contains(method.owner)) // deduplicate traits, in case this property is a trait method
         ).map(_.asTerm).distinct
         val propertyWithTraits = matchingMethodsFromTraits.foldLeft(property) { (property, traitMethod) =>
           applyMetadataAnnotations(traitMethod, property)

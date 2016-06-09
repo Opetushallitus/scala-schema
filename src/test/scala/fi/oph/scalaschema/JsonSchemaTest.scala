@@ -78,6 +78,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         "for method in trait" in {
           jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")
         }
+        "for complex hierarchy of traits" in {
+          jsonSchemaOf(classOf[WithComplexHierarchyOfTraitsWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withcomplexhierarchyoftraitswithsyntheticproperties","additionalProperties":false,"title":"With complex hierarchy of traits with synthetic properties"}""")
+        }
         "for method in trait overridden by val" in {
           jsonSchemaOf(classOf[WithOverriddenSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withoverriddensyntheticproperties","additionalProperties":false,"title":"With overridden synthetic properties","required":["field"]}""")
         }
@@ -110,8 +113,10 @@ case class WithSyntheticProperties() {
   @SyntheticProperty
   def field: Boolean = true
 }
+
 case class WithTraitWithSyntheticProperties() extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties
-case class WithOverriddenSyntheticProperties(override val field: Boolean) extends TraitWithSyntheticProperties
+case class WithComplexHierarchyOfTraitsWithSyntheticProperties() extends SomeSubTrait with OtherSubTrait
+case class WithOverriddenSyntheticProperties(override val field: Boolean) extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties
 
 trait TraitWithSyntheticProperties {
   @SyntheticProperty
@@ -121,6 +126,11 @@ trait TraitWithSyntheticProperties {
 trait OtherTraitWithSyntheticProperties {
   @SyntheticProperty
   def field: Boolean
+}
+trait OtherSubTrait extends TraitWithSyntheticProperties {
+  def field: Boolean
+}
+trait SomeSubTrait extends TraitWithSyntheticProperties {
 }
 
 sealed trait Traits
