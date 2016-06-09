@@ -71,6 +71,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       "@RegularExpression" in {
         jsonSchemaPropertiesOf(classOf[WithRegEx]) should equal("""{"date":{"type":"string","minLength":1,"pattern":"^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$","description":"(Format: ^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$)"}}""")
       }
+      "@SyntheticProperty" in {
+        jsonSchemaPropertiesOf(classOf[WithSyntheticProperties]) should equal("""{"field":{"type":"boolean"}}""")
+      }
     }
   }
 
@@ -95,6 +98,10 @@ case class WithTraitWithFieldWithDescription(field: String) extends TraitWithFie
 case class WithMaxMinItems(@MinItems(1) @MaxItems(2) stuff: List[Int])
 case class WithMaxMinValue(@MinValue(1) @MaxValue(2) value: Int)
 case class WithRegEx(@RegularExpression("^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$") date: String)
+case class WithSyntheticProperties() {
+  @SyntheticProperty
+  def field: Boolean = true
+}
 
 sealed trait Traits
 case class ImplA() extends Traits

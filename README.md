@@ -64,6 +64,15 @@ case class ReadOnlyCat(
 )
 ```
 
+You can tag any method in your case class with `@SyntheticProperty` so that it will also be considered as a property in your schema:
+
+```scala
+case class SyntheticCat() {
+  @SyntheticProperty
+  def name = "synthetic name"
+}
+```
+
 More examples and a pretty much full feature list can be found in this [test file](src/test/scala/fi/oph/scalaschema/JsonSchemaTest.scala).
 
 ### Maven

@@ -81,8 +81,11 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     if (!state.foundTypes.contains(className)) {
       state.foundTypes.add(className)
 
-      val params: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
-      val properties: List[Property] = params.map{ paramSymbol =>
+      val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
+      val syntheticProperties: List[ru.Symbol] = tpe.members.filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty).toList
+      val propertySymbols = constructorParams ++ syntheticProperties
+
+      val properties: List[Property] = propertySymbols.map { paramSymbol =>
         val term = paramSymbol.asTerm
         val termType = createSchema(term.typeSignature, state.childState)
         val termName: String = term.name.decoded.trim
