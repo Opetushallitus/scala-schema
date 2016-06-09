@@ -76,10 +76,10 @@ class JsonSchemaTest extends FreeSpec with Matchers {
           jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
         }
         "for method in trait" in {
-          jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")
+          jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")
         }
         "for method in trait overridden by val" in {
-          jsonSchemaOf(classOf[WithOverriddenSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withoverriddensyntheticproperties","additionalProperties":false,"title":"With overridden synthetic properties","required":["field"]}""")
+          jsonSchemaOf(classOf[WithOverriddenSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withoverriddensyntheticproperties","additionalProperties":false,"title":"With overridden synthetic properties","required":["field"]}""")
         }
       }
     }
@@ -115,6 +115,7 @@ case class WithOverriddenSyntheticProperties(override val field: Boolean) extend
 
 trait TraitWithSyntheticProperties {
   @SyntheticProperty
+  @Description("synthetic field")
   def field: Boolean = true
 }
 trait OtherTraitWithSyntheticProperties {

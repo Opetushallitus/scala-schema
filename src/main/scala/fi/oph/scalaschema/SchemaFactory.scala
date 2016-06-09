@@ -7,6 +7,7 @@ import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
 import scala.annotation.StaticAnnotation
+import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
@@ -74,7 +75,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
   }
 
   private def createClassSchema(tpe: ru.Type, state: ScanState) = {
-    val traits = findTraits(tpe)
+    val traits: List[ru.Type] = findTraits(tpe)
 
     val className: String = tpe.typeSymbol.fullName
     def ref: ClassRefSchema = applyMetadataAnnotations(tpe.typeSymbol, ClassRefSchema(className, Nil))
@@ -88,16 +89,24 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
       val syntheticProperties: List[ru.Symbol] = (tpe.members ++ traits.flatMap(_.members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
         .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
-        .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <-
+        .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor
 
       val propertySymbols = constructorParams ++ syntheticProperties
 
       val properties: List[Property] = propertySymbols.map { paramSymbol =>
+
         val term = paramSymbol.asTerm
         val termType = createSchema(term.typeSignature, state.childState)
         val termName: String = term.name.decoded.trim
+        val ownerTrait = paramSymbol.owner.isAbstract match {
+          case true =>
+            Some(paramSymbol.owner)
+          case false =>
+            None
+        }
         val property = applyMetadataAnnotations(term, Property(termName, termType, Nil))
-        val matchingMethodsFromTraits = traits.flatMap (_.members
+        val otherTraits = traits.filterNot(t => ownerTrait.map(_.fullName).contains(t.typeSymbol.fullName)) // deduplicate traits, in case this property is a trait method
+        val matchingMethodsFromTraits = otherTraits.flatMap (_.members
           .filter(_.isMethod)
           .filter(_.asTerm.asMethod.name.toString == termName )
         ).map(_.asTerm).distinct
