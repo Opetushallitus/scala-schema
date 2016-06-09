@@ -71,8 +71,16 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       "@RegularExpression" in {
         jsonSchemaPropertiesOf(classOf[WithRegEx]) should equal("""{"date":{"type":"string","minLength":1,"pattern":"^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$","description":"(Format: ^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$)"}}""")
       }
-      "@SyntheticProperty" in {
-        jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
+      "@SyntheticProperty" - {
+        "for method in case class" in {
+          jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
+        }
+        "for method in trait" in {
+          jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")
+        }
+        "for method in trait overridden by val" in {
+          jsonSchemaOf(classOf[WithOverriddenSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withoverriddensyntheticproperties","additionalProperties":false,"title":"With overridden synthetic properties","required":["field"]}""")
+        }
       }
     }
   }
@@ -101,6 +109,17 @@ case class WithRegEx(@RegularExpression("^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /
 case class WithSyntheticProperties() {
   @SyntheticProperty
   def field: Boolean = true
+}
+case class WithTraitWithSyntheticProperties() extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties
+case class WithOverriddenSyntheticProperties(override val field: Boolean) extends TraitWithSyntheticProperties
+
+trait TraitWithSyntheticProperties {
+  @SyntheticProperty
+  def field: Boolean = true
+}
+trait OtherTraitWithSyntheticProperties {
+  @SyntheticProperty
+  def field: Boolean
 }
 
 sealed trait Traits
