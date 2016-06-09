@@ -72,7 +72,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         jsonSchemaPropertiesOf(classOf[WithRegEx]) should equal("""{"date":{"type":"string","minLength":1,"pattern":"^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$","description":"(Format: ^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$)"}}""")
       }
       "@SyntheticProperty" in {
-        jsonSchemaPropertiesOf(classOf[WithSyntheticProperties]) should equal("""{"field":{"type":"boolean"}}""")
+        jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
       }
     }
   }

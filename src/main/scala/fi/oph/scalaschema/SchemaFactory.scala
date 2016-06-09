@@ -94,8 +94,13 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
           .filter(_.isMethod)
           .filter(_.asTerm.asMethod.name.toString == termName )
         ).map(_.asTerm).distinct
-        matchingMethodsFromTraits.foldLeft(property) { (property, traitMethod) =>
+        val propertyWithTraits = matchingMethodsFromTraits.foldLeft(property) { (property, traitMethod) =>
           applyMetadataAnnotations(traitMethod, property)
+        }
+        (paramSymbol.isMethod, propertyWithTraits.schema) match {
+          case (_, s@OptionalSchema(itemSchema)) => propertyWithTraits
+          case (true, schema) => propertyWithTraits.copy(schema = OptionalSchema(schema)) // synthetic properties are always optional
+          case _ => propertyWithTraits
         }
       }.toList
 
