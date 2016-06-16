@@ -38,7 +38,38 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
     target.getClass.getMethod(property.key).invoke(target)
   }
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
+
+  def moveDefinitionsToTopLevel: ClassSchema = {
+    def collectDefinitions(schema: Schema): (Schema, List[SchemaWithClassName]) = schema match {
+      case s@AnyOfSchema(alternatives, _) =>
+        val collected: List[(Schema, List[SchemaWithClassName])] = alternatives.map { alt: SchemaWithClassName => collectDefinitions(alt)}
+        (s.copy(alternatives = collected.map(_._1.asInstanceOf[SchemaWithClassName])), collected.flatMap(_._2))
+      case s: ClassSchema =>
+        val collectedProperties = s.properties.map { property =>
+          val (propertySchema, defs) = collectDefinitions(property.schema)
+          (property.copy(schema = propertySchema), defs)
+        }
+        val defsRemoved: ClassSchema = s.copy(properties = collectedProperties.map(_._1), definitions = Nil)
+        val collectedDefinitions = s.definitions.flatMap { definitionSchema =>
+          val (defschema2, defs) = collectDefinitions(definitionSchema)
+          defschema2.asInstanceOf[SchemaWithClassName] :: defs
+        }
+
+        (defsRemoved, collectedDefinitions ++ collectedProperties.flatMap(_._2))
+      case s: ElementSchema =>
+        (schema, Nil)
+      case s: OptionalSchema =>
+        val (itemSchema, defs) = collectDefinitions(s.itemSchema)
+        (OptionalSchema(itemSchema), defs)
+      case s: ListSchema =>
+        val (itemSchema, defs) = collectDefinitions(s.itemSchema)
+        (ListSchema(itemSchema), defs)
+    }
+    val (mainSchema, allDefinitions) = collectDefinitions(this)
+    copy(definitions = allDefinitions)
+  }
 }
+
 case class ClassRefSchema(fullClassName: String, override val metadata: List[Metadata]) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
   override def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
