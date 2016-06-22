@@ -2,12 +2,13 @@ package fi.oph.scalaschema
 
 import java.lang
 import java.lang.reflect.Constructor
+
 import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
+
 import scala.annotation.StaticAnnotation
-import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
@@ -36,7 +37,9 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
   private def createSchema(tpe: ru.Type, state: ScanState): Schema = {
     val typeName = tpe.typeSymbol.fullName
 
-    if (typeName == "scala.Option") {
+    if (typeName == "scala.Some") {
+      createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, state)
+    } else if (typeName == "scala.Option") {
       // Option[T] becomes the schema of T with required set to false
       OptionalSchema(createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, state))
     } else if (isListType(tpe)) {

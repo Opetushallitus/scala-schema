@@ -24,8 +24,13 @@ class JsonSchemaTest extends FreeSpec with Matchers {
     "Required (normal) fields" in {
       jsonSchemaOf(classOf[RequiredFields]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#requiredfields","additionalProperties":false,"title":"Required fields","required":["field"]}""")
     }
-    "Optional fields" in {
-      jsonSchemaOf(classOf[OptionalFields]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#optionalfields","additionalProperties":false,"title":"Optional fields"}""")
+    "Optional fields" - {
+      "Option[A] is treated as non-required field" in {
+        jsonSchemaOf(classOf[OptionalFields]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#optionalfields","additionalProperties":false,"title":"Optional fields"}""")
+      }
+      "Some[A] is treated as required field" in {
+        jsonSchemaOf(classOf[SomeFields]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#somefields","additionalProperties":false,"title":"Some fields","required":["field"]}""")
+      }
     }
     "Primitives" - {
       "Booleans" in {
@@ -94,6 +99,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
 
 case class RequiredFields(field: Boolean)
 case class OptionalFields(field: Option[Boolean])
+case class SomeFields(field: Some[Boolean])
 case class Booleans(field: Boolean)
 case class Numbers(a: Int, b: Long, c: Float, d: Double)
 case class Strings(s: String)
