@@ -77,6 +77,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         "for trait" in {
           jsonSchemaOf(classOf[WithTraitWithFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"string","minLength":1,"description":"Boom boom boom"}},"id":"#withtraitwithfieldwithdescription","additionalProperties":false,"title":"With trait with field with description","required":["field"],"description":"Trait description. Class description"}""")
         }
+        "for field of a class that implements a trait" in {
+          jsonSchemaOf(classOf[WithClassWithDescription]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/classwithdescription","description":"Trait description. Class description"}},"id":"#withclasswithdescription","additionalProperties":false,"title":"With class with description","required":["field"],"definitions":{"classwithdescription":{"type":"object","properties":{},"id":"#classwithdescription","additionalProperties":false,"title":"Class with description","description":"Trait description. Class description"}}}""")
+        }
       }
       "@MinItems, @MaxItems" in {
         jsonSchemaPropertiesOf(classOf[WithMaxMinItems]) should equal("""{"stuff":{"type":"array","items":{"type":"number"},"minItems":1,"description":"(Minimum number of items: 1). (Maximum number of items: 2)","maxItems":2}}""")
@@ -128,6 +131,11 @@ case class OptionalListFieldWithDescription(@Description("Pow pow pow") field: O
 trait TraitWithFieldWithDescription { @Description("Boom boom boom") def field: String }
 @Description("Class description")
 case class WithTraitWithFieldWithDescription(field: String) extends TraitWithFieldWithDescription
+@Description("Trait description")
+trait TraitWithDescription
+@Description("Class description")
+case class ClassWithDescription() extends TraitWithDescription
+case class WithClassWithDescription(field: ClassWithDescription)
 case class WithMaxMinItems(@MinItems(1) @MaxItems(2) stuff: List[Int])
 case class WithMaxMinValue(@MinValue(1) @MaxValue(2) value: Int)
 case class WithRegEx(@RegularExpression("^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$") date: String)

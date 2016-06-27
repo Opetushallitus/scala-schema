@@ -97,7 +97,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     }
   }
 
-  private def createClassRefSchema(tpe: ru.Type) = applyMetadataAnnotations(tpe.typeSymbol, ClassRefSchema(tpe.typeSymbol.fullName, Nil))
+  private def createClassRefSchema(tpe: ru.Type) = applyMetadataFromClassAndTraits(tpe, ClassRefSchema(tpe.typeSymbol.fullName, Nil))
 
   private def createClassSchema(tpe: ru.Type, state: ScanState) = {
     val traits: List[ru.Type] = findTraits(tpe)
@@ -113,7 +113,6 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     val propertySymbols = constructorParams ++ syntheticProperties
 
     val properties: List[Property] = propertySymbols.map { paramSymbol =>
-
       val term = paramSymbol.asTerm
       val termSchema = createSchema(term.typeSignature, state.childState)
       val termName: String = term.name.decoded.trim
@@ -137,13 +136,9 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
         case (true, schema) => propertyWithTraits.copy(schema = OptionalSchema(schema)) // synthetic properties are always optional
         case _ => propertyWithTraits
       }
-    }.toList
-
-    val classSchema = ClassSchema(className, properties, Nil)
-    val classSchemaWithTraits = traits.foldLeft(classSchema) { (schema, t) =>
-      applyMetadataAnnotations(t.typeSymbol, schema)
     }
-    applyMetadataAnnotations(tpe.typeSymbol, classSchemaWithTraits)
+
+    applyMetadataFromClassAndTraits(tpe, ClassSchema(className, properties, Nil))
   }
 
   private def findTraits(tpe: ru.Type) = {
@@ -153,6 +148,11 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       .map {typeByName(_)}
       .filter {_.typeSymbol.asClass.isTrait}
   }
+
+  private def applyMetadataFromClassAndTraits[T <: ObjectWithMetadata[T]](tpe: ru.Type, schema: T): T =
+    applyMetadataAnnotations[T](tpe.typeSymbol, findTraits(tpe).foldLeft(schema) { (schema, t) =>
+      applyMetadataAnnotations[T](t.typeSymbol, schema)
+    })
 
   private def applyMetadataAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
     findAnnotations(symbol, annotationsSupported).asInstanceOf[List[Metadata]].foldLeft(x) {
