@@ -38,7 +38,9 @@ object SchemaToJson {
       ),
       t.metadata
     )
-    case AnyOfSchema(alternatives, _) => JObject(("anyOf" -> JArray(alternatives.map(toJsonSchema(_)))))
+    case AnyOfSchema(alternatives, _, definitions) => JObject(
+      List("anyOf" -> JArray(alternatives.map(toJsonSchema(_)))) ++ toDefinitionProperty(definitions).toList
+    )
   }
 
   private def simpleObjectToJson(tyep: String, enumValues: Option[List[Any]]): JObject = {

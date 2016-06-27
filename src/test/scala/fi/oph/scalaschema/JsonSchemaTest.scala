@@ -52,8 +52,13 @@ class JsonSchemaTest extends FreeSpec with Matchers {
     "Objects (uses definitions)" in {
       jsonSchemaOf(classOf[Objects]) should equal("""{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"],"definitions":{"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
     }
-    "Traits (finds implementations in same package)" in {
-      jsonSchemaOf(classOf[Traits]) should equal("""{"anyOf":[{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"}]}""")
+    "Traits" - {
+      "finds implementations in same package" in {
+        jsonSchemaOf(classOf[Traits]) should equal("""{"anyOf":[{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"}]}""")
+      }
+      "works for fields" in {
+        jsonSchemaOf(classOf[TraitsInFields]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traits"}},"id":"#traitsinfields","additionalProperties":false,"title":"Traits in fields","required":["field"],"definitions":{"impla":{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},"implb":{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"},"traits":{"anyOf":[{"$ref":"#/definitions/impla"},{"$ref":"#/definitions/implb"}]}}}""")
+      }
     }
     "Annotations" - {
       "@Description" - {
@@ -142,6 +147,8 @@ trait SomeSubTrait extends TraitWithSyntheticProperties {
 sealed trait Traits
 case class ImplA() extends Traits
 case class ImplB() extends Traits
+
+case class TraitsInFields(field: Traits)
 
 case class TestClass(name: String, stuff: List[Int])
 

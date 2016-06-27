@@ -48,11 +48,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     } else {
       schemaTypeForScala.getOrElse(typeName, {
         if (tpe.typeSymbol.isClass) {
-          if (tpe.typeSymbol.isAbstract) {
-            addToState(AnyOfSchema(findImplementations(tpe, state), typeName), state)
-          } else {
-            createClassSchema(tpe, state)
-          }
+          createClassOrTraitSchema(tpe, state)
         } else {
           throw new RuntimeException("Unsupported type: " + tpe)
         }
@@ -77,58 +73,73 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     tyep
   }
 
+  private def createClassOrTraitSchema(tpe: ru.Type, state: ScanState) = {
+    val className: String = tpe.typeSymbol.fullName
+    if (!state.foundTypes.contains(className)) {
+      state.foundTypes.add(className)
+
+      val newSchema = if (tpe.typeSymbol.isAbstract) {
+        AnyOfSchema(findImplementations(tpe, state), className)
+      } else {
+        createClassSchema(tpe, state)
+      }
+
+      if (state.root) {
+        val classTypeDefinitions = state.createdTypes.toList
+        newSchema.withDefinitions(definitions = classTypeDefinitions.sortBy(_.simpleName))
+      } else {
+        addToState(newSchema, state)
+        createClassRefSchema(tpe)
+      }
+
+    } else {
+      createClassRefSchema(tpe)
+    }
+  }
+
+  private def createClassRefSchema(tpe: ru.Type) = applyMetadataAnnotations(tpe.typeSymbol, ClassRefSchema(tpe.typeSymbol.fullName, Nil))
+
   private def createClassSchema(tpe: ru.Type, state: ScanState) = {
     val traits: List[ru.Type] = findTraits(tpe)
 
     val className: String = tpe.typeSymbol.fullName
-    def ref: ClassRefSchema = applyMetadataAnnotations(tpe.typeSymbol, ClassRefSchema(className, Nil))
-    if (!state.foundTypes.contains(className)) {
-      state.foundTypes.add(className)
-      
-      val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
-      val syntheticProperties: List[ru.Symbol] = (tpe.members ++ traits.flatMap(_.members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
-        .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
-        .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor
+    state.foundTypes.add(className)
 
-      val propertySymbols = constructorParams ++ syntheticProperties
+    val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
+    val syntheticProperties: List[ru.Symbol] = (tpe.members ++ traits.flatMap(_.members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
+      .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
+      .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor
 
-      val properties: List[Property] = propertySymbols.map { paramSymbol =>
+    val propertySymbols = constructorParams ++ syntheticProperties
 
-        val term = paramSymbol.asTerm
-        val termType = createSchema(term.typeSignature, state.childState)
-        val termName: String = term.name.decoded.trim
-        val ownerTrait = paramSymbol.owner.isAbstract match {
-          case true =>
-            Some(paramSymbol.owner)
-          case false =>
-            None
-        }
-        val property = applyMetadataAnnotations(term, Property(termName, termType, Nil))
-        val matchingMethodsFromTraits = traits.flatMap (_.members
-          .filter(_.isMethod)
-          .filter(_.asTerm.asMethod.name.toString == termName )
-          .filterNot(method => ownerTrait.contains(method.owner)) // deduplicate traits, in case this property is a trait method
-        ).map(_.asTerm).distinct
-        val propertyWithTraits = matchingMethodsFromTraits.foldLeft(property) { (property, traitMethod) =>
-          applyMetadataAnnotations(traitMethod, property)
-        }
-        (paramSymbol.isMethod, propertyWithTraits.schema) match {
-          case (_, s@OptionalSchema(itemSchema)) => propertyWithTraits
-          case (true, schema) => propertyWithTraits.copy(schema = OptionalSchema(schema)) // synthetic properties are always optional
-          case _ => propertyWithTraits
-        }
-      }.toList
+    val properties: List[Property] = propertySymbols.map { paramSymbol =>
 
-      if (state.root) {
-        val classTypeDefinitions = state.createdTypes.toList
-        applyMetadataAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil, classTypeDefinitions.sortBy(_.simpleName)))
-      } else {
-        addToState(applyMetadataAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil)), state)
-        ref
+      val term = paramSymbol.asTerm
+      val termType = createSchema(term.typeSignature, state.childState)
+      val termName: String = term.name.decoded.trim
+      val ownerTrait = paramSymbol.owner.isAbstract match {
+        case true =>
+          Some(paramSymbol.owner)
+        case false =>
+          None
       }
-    } else {
-      ref
-    }
+      val property = applyMetadataAnnotations(term, Property(termName, termType, Nil))
+      val matchingMethodsFromTraits = traits.flatMap (_.members
+        .filter(_.isMethod)
+        .filter(_.asTerm.asMethod.name.toString == termName )
+        .filterNot(method => ownerTrait.contains(method.owner)) // deduplicate traits, in case this property is a trait method
+      ).map(_.asTerm).distinct
+      val propertyWithTraits = matchingMethodsFromTraits.foldLeft(property) { (property, traitMethod) =>
+        applyMetadataAnnotations(traitMethod, property)
+      }
+      (paramSymbol.isMethod, propertyWithTraits.schema) match {
+        case (_, s@OptionalSchema(itemSchema)) => propertyWithTraits
+        case (true, schema) => propertyWithTraits.copy(schema = OptionalSchema(schema)) // synthetic properties are always optional
+        case _ => propertyWithTraits
+      }
+    }.toList
+
+    applyMetadataAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil))
   }
 
   private def findTraits(tpe: ru.Type) = {

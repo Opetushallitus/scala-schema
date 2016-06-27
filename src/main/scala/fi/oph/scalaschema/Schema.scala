@@ -26,7 +26,7 @@ case class StringSchema(enumValues: Option[List[Any]] = None) extends ElementSch
 case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class NumberSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil)
-                       extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassSchema] {
+                       extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
   override def getSchema(className: String): Option[SchemaWithClassName] = {
     if (className == this.fullClassName) {
       Some(this)
@@ -40,9 +40,11 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
   }
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
 
+  def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
+
   def moveDefinitionsToTopLevel: ClassSchema = {
     def collectDefinitions(schema: Schema): (Schema, List[SchemaWithClassName]) = schema match {
-      case s@AnyOfSchema(alternatives, _) =>
+      case s@AnyOfSchema(alternatives, _, _) =>
         val collected: List[(Schema, List[SchemaWithClassName])] = alternatives.map { alt: SchemaWithClassName => collectDefinitions(alt)}
         (s.copy(alternatives = collected.map(_._1.asInstanceOf[SchemaWithClassName])), collected.flatMap(_._2))
       case s: ClassSchema =>
@@ -75,7 +77,14 @@ case class ClassRefSchema(fullClassName: String, override val metadata: List[Met
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
   override def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
 }
-case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String) extends ElementSchema with SchemaWithClassName
+case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions {
+  def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
+}
+
+trait SchemaWithDefinitions extends SchemaWithClassName {
+  def definitions: List[SchemaWithClassName]
+  def withDefinitions(definitions: List[SchemaWithClassName]): SchemaWithDefinitions
+}
 
 trait SchemaWithClassName extends Schema {
   def fullClassName: String
