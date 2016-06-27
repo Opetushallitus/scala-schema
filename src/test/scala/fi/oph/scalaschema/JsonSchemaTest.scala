@@ -66,10 +66,16 @@ class JsonSchemaTest extends FreeSpec with Matchers {
           jsonSchemaOf(classOf[WithDescription]) should equal("""{"type":"object","properties":{},"id":"#withdescription","additionalProperties":false,"title":"With description","description":"Boom boom boom"}""")
         }
         "for field" in {
-          jsonSchemaOf(classOf[FieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"string","minLength":1,"description":"Boom boom boom"}},"id":"#fieldwithdescription","additionalProperties":false,"title":"Field with description","required":["field"]}""")
+          jsonSchemaOf(classOf[FieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/withdescription","description":"Pow pow pow. Boom boom boom"}},"id":"#fieldwithdescription","additionalProperties":false,"title":"Field with description","required":["field"],"definitions":{"withdescription":{"type":"object","properties":{},"id":"#withdescription","additionalProperties":false,"title":"With description","description":"Boom boom boom"}}}""")
         }
-        "for field in trait" in {
-          jsonSchemaOf(classOf[WithTraitWithFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"string","minLength":1,"description":"Boom boom boom"}},"id":"#withtraitwithfieldwithdescription","additionalProperties":false,"title":"With trait with field with description","required":["field"]}""")
+        "for optional field" in {
+          jsonSchemaOf(classOf[OptionalFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/withdescription","description":"Pow pow pow. Boom boom boom"}},"id":"#optionalfieldwithdescription","additionalProperties":false,"title":"Optional field with description","definitions":{"withdescription":{"type":"object","properties":{},"id":"#withdescription","additionalProperties":false,"title":"With description","description":"Boom boom boom"}}}""")
+        }
+        "for list field" in {
+          jsonSchemaOf(classOf[ListFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"array","items":{"$ref":"#/definitions/withdescription","description":"Boom boom boom"},"description":"Pow pow pow. Boom boom boom"}},"id":"#listfieldwithdescription","additionalProperties":false,"title":"List field with description","required":["field"],"definitions":{"withdescription":{"type":"object","properties":{},"id":"#withdescription","additionalProperties":false,"title":"With description","description":"Boom boom boom"}}}""")
+        }
+        "for trait" in {
+          jsonSchemaOf(classOf[WithTraitWithFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"string","minLength":1,"description":"Boom boom boom"}},"id":"#withtraitwithfieldwithdescription","additionalProperties":false,"title":"With trait with field with description","required":["field"],"description":"Trait description. Class description"}""")
         }
       }
       "@MinItems, @MaxItems" in {
@@ -114,8 +120,13 @@ case class Objects(x: Strings)
 
 @Description("Boom boom boom")
 case class WithDescription()
-case class FieldWithDescription(@Description("Boom boom boom") field: String)
+case class FieldWithDescription(@Description("Pow pow pow") field: WithDescription)
+case class OptionalFieldWithDescription(@Description("Pow pow pow") field: Option[WithDescription])
+case class ListFieldWithDescription(@Description("Pow pow pow") field: List[WithDescription])
+case class OptionalListFieldWithDescription(@Description("Pow pow pow") field: Option[List[WithDescription]])
+@Description("Trait description")
 trait TraitWithFieldWithDescription { @Description("Boom boom boom") def field: String }
+@Description("Class description")
 case class WithTraitWithFieldWithDescription(field: String) extends TraitWithFieldWithDescription
 case class WithMaxMinItems(@MinItems(1) @MaxItems(2) stuff: List[Int])
 case class WithMaxMinValue(@MinValue(1) @MaxValue(2) value: Int)

@@ -115,7 +115,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     val properties: List[Property] = propertySymbols.map { paramSymbol =>
 
       val term = paramSymbol.asTerm
-      val termType = createSchema(term.typeSignature, state.childState)
+      val termSchema = createSchema(term.typeSignature, state.childState)
       val termName: String = term.name.decoded.trim
       val ownerTrait = paramSymbol.owner.isAbstract match {
         case true =>
@@ -123,7 +123,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
         case false =>
           None
       }
-      val property = applyMetadataAnnotations(term, Property(termName, termType, Nil))
+      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil))
       val matchingMethodsFromTraits = traits.flatMap (_.members
         .filter(_.isMethod)
         .filter(_.asTerm.asMethod.name.toString == termName )
@@ -139,7 +139,11 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       }
     }.toList
 
-    applyMetadataAnnotations(tpe.typeSymbol, ClassSchema(className, properties, Nil))
+    val classSchema = ClassSchema(className, properties, Nil)
+    val classSchemaWithTraits = traits.foldLeft(classSchema) { (schema, t) =>
+      applyMetadataAnnotations(t.typeSymbol, schema)
+    }
+    applyMetadataAnnotations(tpe.typeSymbol, classSchemaWithTraits)
   }
 
   private def findTraits(tpe: ru.Type) = {

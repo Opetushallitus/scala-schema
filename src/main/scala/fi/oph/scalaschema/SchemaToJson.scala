@@ -13,33 +13,31 @@ object SchemaToJson {
     }
   } ++ JodaTimeSerializers.all
 
-  def toJsonSchema(t: Schema): JValue = t match {
+  def toJsonSchema(t: Schema): JObject = {
+    appendMetadata(toJsonSchemaWithoutMetadata(t), t.metadata)
+  }
+
+  private def toJsonSchemaWithoutMetadata(t: Schema): JObject = t match {
     case DateSchema(enumValues) => JObject(List("type" -> JString("string"), "format" -> JString("date")) ++ toEnumValueProperty(enumValues))
     case StringSchema(enumValues) => withMinLength(simpleObjectToJson("string", enumValues), Some(1))
     case BooleanSchema(enumValues) => simpleObjectToJson("boolean", enumValues)
     case NumberSchema(enumValues) => simpleObjectToJson("number", enumValues)
     case ListSchema(x) => JObject(("type") -> JString("array"), (("items" -> toJsonSchema(x))))
-    case OptionalSchema(x) => toJsonSchema(x)
-    case t: ClassRefSchema => appendMetadata(
-      JObject(
-        ("$ref" -> JString("#/definitions/" + t.simpleName))
-      ),
-      t.metadata
+    case OptionalSchema(x) => toJsonSchemaWithoutMetadata(x)
+    case t: ClassRefSchema => JObject(
+      ("$ref" -> JString("#/definitions/" + t.simpleName))
     )
-    case t: ClassSchema => appendMetadata(
-      JObject(List(
-        ("type" -> JString("object")),
-        ("properties" -> toJsonProperties(t.properties)),
-        ("id" -> JString("#" + t.simpleName)),
-        ("additionalProperties" -> JBool(false)),
-        ("title" -> JString(t.titleName))
-      ) ++ toRequiredProperties(t.properties).toList
-        ++ toDefinitionProperty(t.definitions).toList
-      ),
-      t.metadata
+    case t: ClassSchema => JObject(List(
+      ("type" -> JString("object")),
+      ("properties" -> toJsonProperties(t.properties)),
+      ("id" -> JString("#" + t.simpleName)),
+      ("additionalProperties" -> JBool(false)),
+      ("title" -> JString(t.titleName))
+    ) ++ toRequiredProperties(t.properties).toList
+      ++ toDefinitionProperty(t.definitions).toList
     )
     case AnyOfSchema(alternatives, _, definitions) => JObject(
-      List("anyOf" -> JArray(alternatives.map(toJsonSchema(_)))) ++ toDefinitionProperty(definitions).toList
+      List("anyOf" -> JArray(alternatives.map(toJsonSchemaWithoutMetadata(_)))) ++ toDefinitionProperty(definitions).toList
     )
   }
 
@@ -62,7 +60,7 @@ object SchemaToJson {
 
   private def toJsonProperties(properties: List[Property]): JValue = {
     JObject(properties.map { property =>
-        (property.key, appendMetadata(toJsonSchema(property.schema).asInstanceOf[JObject], property.metadata))
+        (property.key, appendMetadata(appendMetadata(toJsonSchemaWithoutMetadata(property.schema), property.metadata), property.schema.metadata))
     })
   }
   private def toRequiredProperties(properties: List[Property]): Option[(String, JValue)] = {
@@ -83,7 +81,7 @@ object SchemaToJson {
   }
 
   private def appendMetadata(obj: JObject, metadata: List[Metadata]): JObject = {
-    metadata.foldLeft(obj) { case (obj: JObject, metadata) =>
+    metadata.foldLeft(obj) { case (obj: JObject, metadata: Metadata) =>
       metadata.appendMetadataToJsonSchema(obj)
     }
   }

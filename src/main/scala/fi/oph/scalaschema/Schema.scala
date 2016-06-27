@@ -9,10 +9,12 @@ sealed trait Schema {
 }
 
 case class OptionalSchema(itemSchema: Schema) extends Schema {
+  override def metadata: List[Metadata] = itemSchema.metadata
   def mapItems(f: ElementSchema => ElementSchema) = OptionalSchema(itemSchema.mapItems(f))
 }
 
 case class ListSchema(itemSchema: Schema) extends Schema {
+  override def metadata: List[Metadata] = itemSchema.metadata
   def mapItems(f: ElementSchema => ElementSchema) = ListSchema(itemSchema.mapItems(f))
 }
 
