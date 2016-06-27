@@ -54,7 +54,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
             createClassSchema(tpe, state)
           }
         } else {
-          throw new RuntimeException("What is this type: " + tpe)
+          throw new RuntimeException("Unsupported type: " + tpe)
         }
       })
     }
