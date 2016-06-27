@@ -36,7 +36,7 @@ object SchemaToJson {
     ) ++ toRequiredProperties(t.properties).toList
       ++ toDefinitionProperty(t.definitions).toList
     )
-    case AnyOfSchema(alternatives, _, definitions) => JObject(
+    case AnyOfSchema(alternatives, _, _, definitions) => JObject(
       List("anyOf" -> JArray(alternatives.map(toJsonSchemaWithoutMetadata(_)))) ++ toDefinitionProperty(definitions).toList
     )
   }

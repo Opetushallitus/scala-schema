@@ -79,7 +79,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       state.foundTypes.add(className)
 
       val newSchema = if (tpe.typeSymbol.isAbstract) {
-        AnyOfSchema(findImplementations(tpe, state), className)
+        applyMetadataFromClassAndTraits(tpe, AnyOfSchema(findImplementations(tpe, state), className, Nil))
       } else {
         createClassSchema(tpe, state)
       }
@@ -147,6 +147,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       .filter(!List("scala.Any").contains(_))
       .map {typeByName(_)}
       .filter {_.typeSymbol.asClass.isTrait}
+      .filterNot {_ == tpe}
   }
 
   private def applyMetadataFromClassAndTraits[T <: ObjectWithMetadata[T]](tpe: ru.Type, schema: T): T =

@@ -46,7 +46,7 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
 
   def moveDefinitionsToTopLevel: ClassSchema = {
     def collectDefinitions(schema: Schema): (Schema, List[SchemaWithClassName]) = schema match {
-      case s@AnyOfSchema(alternatives, _, _) =>
+      case s@AnyOfSchema(alternatives, _, _, _) =>
         val collected: List[(Schema, List[SchemaWithClassName])] = alternatives.map { alt: SchemaWithClassName => collectDefinitions(alt)}
         (s.copy(alternatives = collected.map(_._1.asInstanceOf[SchemaWithClassName])), collected.flatMap(_._2))
       case s: ClassSchema =>
@@ -79,8 +79,9 @@ case class ClassRefSchema(fullClassName: String, override val metadata: List[Met
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
   override def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
 }
-case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions {
+case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
   def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
+  def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
 }
 
 trait SchemaWithDefinitions extends SchemaWithClassName {

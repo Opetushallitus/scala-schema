@@ -53,7 +53,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       jsonSchemaOf(classOf[Objects]) should equal("""{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"],"definitions":{"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
     }
     "Traits" - {
-      "finds implementations in same package" in {
+      "finds implementations in same package, creates anyOf schema" in {
         jsonSchemaOf(classOf[Traits]) should equal("""{"anyOf":[{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"}]}""")
       }
       "works for fields" in {
@@ -74,11 +74,17 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         "for list field" in {
           jsonSchemaOf(classOf[ListFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"array","items":{"$ref":"#/definitions/withdescription","description":"Boom boom boom"},"description":"Pow pow pow. Boom boom boom"}},"id":"#listfieldwithdescription","additionalProperties":false,"title":"List field with description","required":["field"],"definitions":{"withdescription":{"type":"object","properties":{},"id":"#withdescription","additionalProperties":false,"title":"With description","description":"Boom boom boom"}}}""")
         }
-        "for trait" in {
+        "for case class extending a trait" in {
           jsonSchemaOf(classOf[WithTraitWithFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"type":"string","minLength":1,"description":"Boom boom boom"}},"id":"#withtraitwithfieldwithdescription","additionalProperties":false,"title":"With trait with field with description","required":["field"],"description":"Trait description. Class description"}""")
         }
         "for field of a class that implements a trait" in {
           jsonSchemaOf(classOf[WithClassWithDescription]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/classwithdescription","description":"Trait description. Class description"}},"id":"#withclasswithdescription","additionalProperties":false,"title":"With class with description","required":["field"],"definitions":{"classwithdescription":{"type":"object","properties":{},"id":"#classwithdescription","additionalProperties":false,"title":"Class with description","description":"Trait description. Class description"}}}""")
+        }
+        "for trait in anyOf schema" in {
+          jsonSchemaOf(classOf[TraitsWithDescription]) should equal("""{"anyOf":[{"type":"object","properties":{},"id":"#implc","additionalProperties":false,"title":"Impl c"},{"type":"object","properties":{},"id":"#impld","additionalProperties":false,"title":"Impl d"}],"description":"common description"}""")
+        }
+        "for field with anyOf schema" in {
+          jsonSchemaOf(classOf[WithTraitFieldWithDescription]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traitswithdescription","description":"common description"}},"id":"#withtraitfieldwithdescription","additionalProperties":false,"title":"With trait field with description","required":["field"],"definitions":{"implc":{"type":"object","properties":{},"id":"#implc","additionalProperties":false,"title":"Impl c","description":"common description"},"impld":{"type":"object","properties":{},"id":"#impld","additionalProperties":false,"title":"Impl d","description":"common description"},"traitswithdescription":{"anyOf":[{"$ref":"#/definitions/implc"},{"$ref":"#/definitions/impld"}],"description":"common description"}}}""")
         }
       }
       "@MinItems, @MaxItems" in {
@@ -168,6 +174,12 @@ case class ImplA() extends Traits
 case class ImplB() extends Traits
 
 case class TraitsInFields(field: Traits)
+
+@Description("common description")
+sealed trait TraitsWithDescription
+case class ImplC() extends TraitsWithDescription
+case class ImplD() extends TraitsWithDescription
+case class WithTraitFieldWithDescription(field: TraitsWithDescription)
 
 case class TestClass(name: String, stuff: List[Int])
 
