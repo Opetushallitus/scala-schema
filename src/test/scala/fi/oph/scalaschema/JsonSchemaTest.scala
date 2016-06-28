@@ -111,6 +111,16 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         }
       }
     }
+
+    "Title" - {
+      "CamelCase to words" in {
+        ClassRefSchema("com.foo.CamelCase", Nil).titleName should equal("Camel case")
+      }
+
+      "Lodash (_) to dash (-)" in {
+        ClassRefSchema("foo.bar.Foo_Bar", Nil).titleName should equal("Foo-bar")
+      }
+    }
   }
 
   def jsonSchemaOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson)

@@ -95,7 +95,7 @@ trait SchemaWithClassName extends Schema {
     simpleClassName.toLowerCase
   }
   def titleName: String = {
-    simpleClassName.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").capitalize
+    simpleClassName.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize
   }
   def getSchema(className: String): Option[SchemaWithClassName] = if (className == fullClassName) {
     Some(this)
