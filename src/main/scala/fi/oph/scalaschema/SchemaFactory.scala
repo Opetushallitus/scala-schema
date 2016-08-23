@@ -79,7 +79,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       state.foundTypes.add(className)
 
       val newSchema = if (tpe.typeSymbol.isAbstract) {
-        applyMetadataFromClassAndTraits(tpe, AnyOfSchema(findImplementations(tpe, state), className, Nil))
+        applyMetadataFromClassAndTraits(tpe, AnyOfSchema(findImplementations(tpe, state.childState), className, Nil))
       } else {
         createClassSchema(tpe, state)
       }
