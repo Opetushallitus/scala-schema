@@ -6,21 +6,32 @@ sealed trait Schema {
   def metadata: List[Metadata] = Nil
   def mapItems(f: ElementSchema => ElementSchema): Schema
   def toJson: JValue = SchemaToJson.toJsonSchema(this)
+  // Returns this schema with definitions removed, plus list of definitions removed
+  def collectDefinitions: (Schema, List[SchemaWithClassName])
 }
 
 case class OptionalSchema(itemSchema: Schema) extends Schema {
   override def metadata: List[Metadata] = itemSchema.metadata
   def mapItems(f: ElementSchema => ElementSchema) = OptionalSchema(itemSchema.mapItems(f))
+  def collectDefinitions = {
+    val (itemSchema, defs) = this.itemSchema.collectDefinitions
+    (OptionalSchema(itemSchema), defs)
+  }
 }
 
 case class ListSchema(itemSchema: Schema) extends Schema {
   override def metadata: List[Metadata] = itemSchema.metadata
   def mapItems(f: ElementSchema => ElementSchema) = ListSchema(itemSchema.mapItems(f))
+  def collectDefinitions = {
+    val (itemSchema, defs) = this.itemSchema.collectDefinitions
+    (ListSchema(itemSchema), defs)
+  }
 }
 
 // Marker trait for schemas of actual elements (not optional/list wrappers)
 trait ElementSchema extends Schema {
   def mapItems(f: ElementSchema => ElementSchema): Schema = f(this)
+  def collectDefinitions: (Schema, List[SchemaWithClassName]) = (this, Nil)
 }
 
 case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
@@ -45,38 +56,22 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
   def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
 
   def moveDefinitionsToTopLevel: ClassSchema = {
-    def collectDefinitions(schema: Schema): (Schema, List[SchemaWithClassName]) = schema match {
-      case s@AnyOfSchema(alternatives, _, _, _) =>
-        val collected: List[(Schema, List[SchemaWithClassName])] = alternatives.map { alt: SchemaWithClassName => collectDefinitions(alt)}
-        (s.copy(alternatives = collected.map(_._1.asInstanceOf[SchemaWithClassName])), collected.flatMap(_._2))
-      case s: ClassSchema =>
-        val collectedProperties = s.properties.map { property =>
-          val (propertySchema, defs) = collectDefinitions(property.schema)
-          (property.copy(schema = propertySchema), defs)
-        }
-        val propertiesWithDefsRemoved: List[Property] = collectedProperties.map(_._1)
-
-        val definitionsCollectedFromDefinitions = s.definitions.flatMap { definitionSchema =>
-          val (defschema2, defs) = collectDefinitions(definitionSchema)
-          defschema2.asInstanceOf[SchemaWithClassName] :: defs
-        }
-
-        val definitionsCollectedFromProperties: List[SchemaWithClassName] = collectedProperties.flatMap(_._2)
-
-        val thisSchemaWithDefinitionsRemoved: ClassSchema = s.copy(properties = propertiesWithDefsRemoved, definitions = Nil)
-
-        (thisSchemaWithDefinitionsRemoved, definitionsCollectedFromDefinitions ++ definitionsCollectedFromProperties)
-      case s: ElementSchema =>
-        (schema, Nil)
-      case s: OptionalSchema =>
-        val (itemSchema, defs) = collectDefinitions(s.itemSchema)
-        (OptionalSchema(itemSchema), defs)
-      case s: ListSchema =>
-        val (itemSchema, defs) = collectDefinitions(s.itemSchema)
-        (ListSchema(itemSchema), defs)
-    }
-    val (thisSchemaWithoutDefs, allDefinitions) = collectDefinitions(this)
+    val (thisSchemaWithoutDefs, allDefinitions) = this.collectDefinitions
     thisSchemaWithoutDefs.asInstanceOf[ClassSchema].copy(definitions = allDefinitions)
+  }
+
+  override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
+    val collectedProperties = this.properties.map { property =>
+      val (propertySchema, defs) = property.schema.collectDefinitions
+      (property.copy(schema = propertySchema), defs)
+    }
+    val propertiesWithDefsRemoved: List[Property] = collectedProperties.map(_._1)
+
+    val definitionsCollectedFromProperties: List[SchemaWithClassName] = collectedProperties.flatMap(_._2)
+
+    val thisSchemaWithDefinitionsRemoved: ClassSchema = this.copy(properties = propertiesWithDefsRemoved, definitions = Nil)
+
+    (thisSchemaWithDefinitionsRemoved, (definitionsCollectedFromDefinitions ++ definitionsCollectedFromProperties).distinct)
   }
 }
 
@@ -87,11 +82,27 @@ case class ClassRefSchema(fullClassName: String, override val metadata: List[Met
 case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
   def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
+  override def collectDefinitions: (AnyOfSchema, List[SchemaWithClassName]) = {
+    val collectedFromAlternatives: List[(Schema, List[SchemaWithClassName])] = alternatives.map { alt: SchemaWithClassName => alt.collectDefinitions}
+    val alternativesWithoutDefinitions: List[SchemaWithClassName] = collectedFromAlternatives.map(_._1.asInstanceOf[SchemaWithClassName])
+    val definitionsCollectedFromAlternatives: List[SchemaWithClassName] = collectedFromAlternatives.flatMap(_._2)
+
+    (this.copy(alternatives = alternativesWithoutDefinitions, definitions = Nil), definitionsCollectedFromAlternatives ++ definitionsCollectedFromDefinitions)
+  }
+  def moveDefinitionsToTopLevel: AnyOfSchema = {
+    val (thisSchemaWithoutDefs, allDefinitions) = this.collectDefinitions
+    thisSchemaWithoutDefs.withDefinitions(allDefinitions.distinct)
+  }
 }
 
 trait SchemaWithDefinitions extends SchemaWithClassName {
   def definitions: List[SchemaWithClassName]
   def withDefinitions(definitions: List[SchemaWithClassName]): SchemaWithDefinitions
+  def moveDefinitionsToTopLevel: SchemaWithDefinitions
+  protected [scalaschema] def definitionsCollectedFromDefinitions: List[SchemaWithClassName] = this.definitions.flatMap { definitionSchema =>
+    val (defschema2, defs) = definitionSchema.collectDefinitions
+    defschema2.asInstanceOf[SchemaWithClassName] :: defs
+  }
 }
 
 trait SchemaWithClassName extends Schema {
