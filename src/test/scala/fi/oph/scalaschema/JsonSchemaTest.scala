@@ -121,9 +121,21 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         ClassRefSchema("foo.bar.Foo_Bar", Nil).titleName should equal("Foo-bar")
       }
     }
+
+    "Moving definitions to top level" - {
+      "Happens automatically for nested structures" in {
+        jsonSchemaOf(classOf[NestedDefinitions]) should equal("""{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"],"definitions":{"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
+      }
+      "Can be performed after creation for artesanal schemas" in {
+        val schema = ClassSchema("test", List(Property("testprop", NumberSchema())), Nil, List(schemaOf(classOf[NestedDefinitions]))).moveDefinitionsToTopLevel
+        jsonSchemaOf(schema) should equal("""{"type":"object","properties":{"testprop":{"type":"number"}},"id":"#test","additionalProperties":false,"title":"Test","required":["testprop"],"definitions":{"nesteddefinitions":{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"]},"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
+      }
+    }
   }
 
-  def jsonSchemaOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson)
+  def schemaOf(c: Class[_]) = SchemaFactory.default.createSchema(c)
+  def jsonSchemaOf(c: Class[_]): String = jsonSchemaOf(schemaOf(c))
+  def jsonSchemaOf(s: Schema): String = JsonMethods.compact(s.toJson)
   def jsonSchemaPropertiesOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson \\ "properties")
 }
 
@@ -136,6 +148,7 @@ case class Strings(s: String)
 case class Dates(d: LocalDate)
 case class Lists(things: List[Int])
 case class Objects(x: Strings)
+case class NestedDefinitions(x: Objects)
 
 @Description("Boom boom boom")
 case class WithDescription()

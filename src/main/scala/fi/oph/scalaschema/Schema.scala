@@ -75,8 +75,8 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
         val (itemSchema, defs) = collectDefinitions(s.itemSchema)
         (ListSchema(itemSchema), defs)
     }
-    val (mainSchema, allDefinitions) = collectDefinitions(this)
-    copy(definitions = allDefinitions)
+    val (thisSchemaWithoutDefs, allDefinitions) = collectDefinitions(this)
+    thisSchemaWithoutDefs.asInstanceOf[ClassSchema].copy(definitions = allDefinitions)
   }
 }
 
