@@ -54,13 +54,18 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
           val (propertySchema, defs) = collectDefinitions(property.schema)
           (property.copy(schema = propertySchema), defs)
         }
-        val defsRemoved: ClassSchema = s.copy(properties = collectedProperties.map(_._1), definitions = Nil)
-        val collectedDefinitions = s.definitions.flatMap { definitionSchema =>
+        val propertiesWithDefsRemoved: List[Property] = collectedProperties.map(_._1)
+
+        val definitionsCollectedFromDefinitions = s.definitions.flatMap { definitionSchema =>
           val (defschema2, defs) = collectDefinitions(definitionSchema)
           defschema2.asInstanceOf[SchemaWithClassName] :: defs
         }
 
-        (defsRemoved, collectedDefinitions ++ collectedProperties.flatMap(_._2))
+        val definitionsCollectedFromProperties: List[SchemaWithClassName] = collectedProperties.flatMap(_._2)
+
+        val thisSchemaWithDefinitionsRemoved: ClassSchema = s.copy(properties = propertiesWithDefsRemoved, definitions = Nil)
+
+        (thisSchemaWithDefinitionsRemoved, definitionsCollectedFromDefinitions ++ definitionsCollectedFromProperties)
       case s: ElementSchema =>
         (schema, Nil)
       case s: OptionalSchema =>
