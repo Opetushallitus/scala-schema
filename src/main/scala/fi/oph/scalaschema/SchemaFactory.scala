@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
+import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
@@ -100,13 +101,15 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
   private def createClassRefSchema(tpe: ru.Type) = applyMetadataFromClassAndTraits(tpe, ClassRefSchema(tpe.typeSymbol.fullName, Nil))
 
   private def createClassSchema(tpe: ru.Type, state: ScanState) = {
+    import MemberFinder.members
     val traits: List[ru.Type] = findTraits(tpe)
 
     val className: String = tpe.typeSymbol.fullName
+
     state.foundTypes.add(className)
 
     val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
-    val syntheticProperties: List[ru.Symbol] = (tpe.members ++ traits.flatMap(_.members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
+    val syntheticProperties: List[ru.Symbol] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
       .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
       .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor
 
@@ -123,7 +126,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
           None
       }
       val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil))
-      val matchingMethodsFromTraits = traits.flatMap (_.members
+      val matchingMethodsFromTraits = traits.flatMap (t => members(t)
         .filter(_.isMethod)
         .filter(_.asTerm.asMethod.name.toString == termName )
         .filterNot(method => ownerTrait.contains(method.owner)) // deduplicate traits, in case this property is a trait method
@@ -176,6 +179,17 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     implementationClasses.toList.map { klass =>
       createSchema(currentMirror.classSymbol(klass).toType, state).asInstanceOf[SchemaWithClassName]
     }
+  }
+}
+
+private object MemberFinder {
+  val cache: collection.mutable.Map[String, ru.MemberScope] = collection.mutable.Map.empty
+
+  def members(tpe: ru.Type) = this.synchronized {
+    val className: String = tpe.typeSymbol.asClass.fullName
+    cache.getOrElseUpdate(className, {
+      tpe.members
+    })
   }
 }
 
