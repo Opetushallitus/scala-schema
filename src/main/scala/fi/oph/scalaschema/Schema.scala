@@ -1,5 +1,6 @@
 package fi.oph.scalaschema
 
+import fi.oph.scalaschema.annotation.Title
 import org.json4s.JsonAST.JValue
 
 sealed trait Schema {
@@ -111,7 +112,12 @@ trait SchemaWithClassName extends Schema {
     simpleClassName.toLowerCase
   }
   def titleName: String = {
-    simpleClassName.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize
+    this.metadata.collect{case Title(t) => t} match {
+      case Nil =>
+        simpleClassName.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize
+      case titles =>
+        titles.mkString(" ")
+    }
   }
   def getSchema(className: String): Option[SchemaWithClassName] = if (className == fullClassName) {
     Some(this)

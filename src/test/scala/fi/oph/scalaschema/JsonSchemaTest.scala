@@ -120,6 +120,10 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       "Lodash (_) to dash (-)" in {
         ClassRefSchema("foo.bar.Foo_Bar", Nil).titleName should equal("Foo-bar")
       }
+
+      "Title annotation" - {
+        jsonSchemaOf(classOf[WithTitle]) should equal("""{"type":"object","properties":{},"id":"#withtitle","additionalProperties":false,"title":"Custom title"}""")
+      }
     }
 
     "Moving definitions to top level" - {
@@ -157,6 +161,8 @@ case class NestedDefinitions(x: Objects)
 
 @Description("Boom boom boom")
 case class WithDescription()
+@Title("Custom title")
+case class WithTitle()
 case class FieldWithDescription(@Description("Pow pow pow") field: WithDescription)
 case class OptionalFieldWithDescription(@Description("Pow pow pow") field: Option[WithDescription])
 case class ListFieldWithDescription(@Description("Pow pow pow") field: List[WithDescription])

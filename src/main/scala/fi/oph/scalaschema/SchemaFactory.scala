@@ -13,7 +13,7 @@ import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
-  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[RegularExpression])
+  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[RegularExpression])
   lazy val default = SchemaFactory(defaultAnnotations)
 }
 
