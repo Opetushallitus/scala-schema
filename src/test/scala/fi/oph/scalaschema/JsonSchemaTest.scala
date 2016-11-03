@@ -93,6 +93,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       "@MinValue, @MaxValue" in {
         jsonSchemaPropertiesOf(classOf[WithMaxMinValue]) should equal("""{"value":{"type":"number","minimum":1.0,"description":"(Minimum value: 1.0). (Maximum value: 2.0)","maximum":2.0}}""")
       }
+      "@MinValueExclusive, @MaxValueExclusive" in {
+        jsonSchemaPropertiesOf(classOf[WithMaxMinValueExclusive]) should equal("""{"value":{"type":"number","minimum":1.0,"exclusiveMinimum":true,"description":"(Minimum value: 1.0 exclusive). (Maximum value: 2.0 exclusive)","maximum":2.0,"exclusiveMaximum":true}}""")
+      }
       "@RegularExpression" in {
         jsonSchemaPropertiesOf(classOf[WithRegEx]) should equal("""{"date":{"type":"string","minLength":1,"pattern":"^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$","description":"(Format: ^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$)"}}""")
       }
@@ -178,6 +181,7 @@ case class ClassWithDescription() extends TraitWithDescription
 case class WithClassWithDescription(field: ClassWithDescription)
 case class WithMaxMinItems(@MinItems(1) @MaxItems(2) stuff: List[Int])
 case class WithMaxMinValue(@MinValue(1) @MaxValue(2) value: Int)
+case class WithMaxMinValueExclusive(@MinValueExclusive(1) @MaxValueExclusive(2) value: Int)
 case class WithRegEx(@RegularExpression("^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$") date: String)
 case class WithSyntheticProperties() {
   @SyntheticProperty

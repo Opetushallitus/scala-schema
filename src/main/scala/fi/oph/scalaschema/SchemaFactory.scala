@@ -13,7 +13,7 @@ import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
-  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[RegularExpression])
+  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive], classOf[RegularExpression])
   lazy val default = SchemaFactory(defaultAnnotations)
 }
 
@@ -226,12 +226,14 @@ object Annotations {
     val StringClass = classOf[String]
     val DoubleClass = classOf[Double]
     val IntegerClass = classOf[Int]
+    val BooleanClass = classOf[Boolean]
 
     val constructor: Constructor[_] = annotationClass.getConstructors()(0)
     val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex.map {
       case (StringClass, index) => params(index)
       case (DoubleClass, index) => new lang.Double(params(index).toDouble)
       case (IntegerClass, index) => new lang.Integer(params(index).toDouble.toInt)
+      case (BooleanClass, index) => new lang.Boolean(params(index).toBoolean)
       case (tyep, _) =>
         // Only a handful of types supported at the moment
         throw new IllegalArgumentException("Argument type not supported: " + tyep)
