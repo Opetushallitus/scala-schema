@@ -60,6 +60,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         jsonSchemaOf(classOf[TraitsInFields]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traits"}},"id":"#traitsinfields","additionalProperties":false,"title":"Traits in fields","required":["field"],"definitions":{"impla":{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},"implb":{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"},"traits":{"anyOf":[{"$ref":"#/definitions/impla"},{"$ref":"#/definitions/implb"}]}}}""")
       }
     }
+    "Specialized schema -> no #id" in {
+      jsonSchemaOf(schemaOf(classOf[RequiredFields]).asInstanceOf[ClassSchema].copy(specialized = true)) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"additionalProperties":false,"title":"Required fields","required":["field"]}""")
+    }
     "Annotations" - {
       "@Description" - {
         "for case class" in {
@@ -124,7 +127,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         ClassRefSchema("foo.bar.Foo_Bar", Nil).titleName should equal("Foo-bar")
       }
 
-      "Title annotation" - {
+      "Title annotation" in {
         jsonSchemaOf(classOf[WithTitle]) should equal("""{"type":"object","properties":{},"id":"#withtitle","additionalProperties":false,"title":"Custom title"}""")
       }
     }

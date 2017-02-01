@@ -29,8 +29,9 @@ object SchemaToJson {
     )
     case t: ClassSchema => JObject(List(
       ("type" -> JString("object")),
-      ("properties" -> toJsonProperties(t.properties)),
-      ("id" -> JString("#" + t.simpleName)),
+      ("properties" -> toJsonProperties(t.properties)))
+      ++ (if (!t.specialized) { List(("id" -> JString("#" + t.simpleName))) } else Nil )
+      ++ List(
       ("additionalProperties" -> JBool(false)),
       ("title" -> JString(t.titleName))
     ) ++ toRequiredProperties(t.properties).toList

@@ -39,7 +39,7 @@ case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchem
 case class StringSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class NumberSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
-case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil)
+case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false)
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
   override def getSchema(className: String): Option[SchemaWithClassName] = {
     if (className == this.fullClassName) {
