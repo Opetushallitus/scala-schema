@@ -149,7 +149,12 @@ Then add scala-schema as dependency
 </dependencies>
 ```
 
-
 #### SBT
 
-Haven't used SBT for a while but it shouldn't be a biggie, as it should be able to use Jitpack.io like any other Maven repository, right?
+Add Jitpack.io resolver:
+
+    resolvers += "jitpack" at "https://jitpack.io",
+
+Then add scala-schema as dependency (use appropriate scala version suffix as below)
+
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.1.2_2.12"
