@@ -110,15 +110,16 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
 
     state.foundTypes.add(className)
 
-    val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
+    val constructorParams: List[(ru.Symbol, Boolean)] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil).map((_, false))
 
-    val syntheticProperties: List[ru.Symbol] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
+    val syntheticProperties: List[(ru.Symbol, Boolean)] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
       .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
-      .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor
+      .filterNot(sym => constructorParams.map(_._1.name).contains(sym.name)) // <- remove if overridden in case class constructor
+      .map((_, true))
 
     val propertySymbols = constructorParams ++ syntheticProperties
 
-    val properties: List[Property] = propertySymbols.map { paramSymbol =>
+    val properties: List[Property] = propertySymbols.map { case (paramSymbol, synthetic) =>
       val term = paramSymbol.asTerm
       val termSchema = createSchema(term.typeSignature, state.childState)
       val termName: String = term.name.decoded.trim
@@ -128,7 +129,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
         case false =>
           None
       }
-      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil))
+      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil, synthetic))
       val matchingMethodsFromTraits = traits.flatMap (t => members(t)
         .filter(_.isMethod)
         .filter(_.asTerm.asMethod.name.toString == termName )

@@ -55,6 +55,11 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
         val bd: BigDecimal = result.bd.get
       }
     }
+    "Synthetic properties" - {
+      "Are ignored" in {
+        verifyExtractionRoundTrip(WithSyntheticProperties())
+      }
+    }
   }
 
   private def verifyValidation(input: AnyRef, klass: Class[_], expectedResult: Either[List[ValidationError], AnyRef]) = {

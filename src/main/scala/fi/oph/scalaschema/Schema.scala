@@ -137,6 +137,6 @@ trait SchemaWithClassName extends Schema {
   def appliesToClass(k: Class[_]) = k.getName == fullClassName
 }
 
-case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil) extends ObjectWithMetadata[Property] {
+case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false) extends ObjectWithMetadata[Property] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
 }
