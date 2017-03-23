@@ -104,7 +104,14 @@ case class ValidationTestClass(name: String, stuff: List[Int])
 
 ```
 
-### Maven
+### How to use as dependency
+
+The `scala-schema` library is currently maintained in two branches for scala versions 2.11 and 2.12.
+
+It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to 
+depend on it anyway. Just follow the instructions below.
+
+#### Maven
 
 Add Jitpack.io as a repository:
 
@@ -130,3 +137,8 @@ Then add scala-schema as dependency
   </dependency>
 </dependencies>
 ```
+
+
+#### SBT
+
+Haven't used SBT for a while but it shouldn't be a biggie, as it should be able to use Jitpack.io like any other Maven repository, right?
