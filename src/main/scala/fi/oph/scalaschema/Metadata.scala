@@ -40,3 +40,7 @@ trait JsonMetadataSupport {
     p.copy(schema = newSchema)
   }
 }
+
+trait RepresentationalMetadata extends Metadata {
+  override def appendMetadataToJsonSchema(obj: JObject) = obj // Does not affect JSON schema
+}

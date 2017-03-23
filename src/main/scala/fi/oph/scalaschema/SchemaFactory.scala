@@ -13,7 +13,7 @@ import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
 
 object SchemaFactory {
-  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive], classOf[RegularExpression])
+  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive], classOf[RegularExpression], classOf[Discriminator], classOf[IgnoreInAnyOfDeserialization])
   lazy val default = SchemaFactory(defaultAnnotations)
 }
 
@@ -109,6 +109,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     state.foundTypes.add(className)
 
     val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
+
     val syntheticProperties: List[ru.Symbol] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
       .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
       .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor

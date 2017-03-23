@@ -1,8 +1,11 @@
 ## scala-schema
 
-Generate a [JSON schema](http://json-schema.org/) from Scala classes. 
+Generate a [JSON schema](http://json-schema.org/) from Scala classes 
 
 - Create schema from any case class
+- Export the schema as JSON
+- Use the schema object directly for efficient JSON validation
+- Extract JSON into case classes while validating on the way
 - Supports case classes, lists, strings, dates, numbers, booleans
 - Supports polymorphism via traits: finds trait implementations in same package
 - Customize schema with annotations (like min/max size, description)
@@ -74,6 +77,32 @@ case class SyntheticCat() {
 ```
 
 More examples and a pretty much full feature list can be found in this [test file](src/test/scala/fi/oph/scalaschema/JsonSchemaTest.scala).
+
+### Validation and extraction
+
+```scala
+
+package fi.oph.scalaschema
+
+import fi.oph.scalaschema.SchemaValidatingExtractor.extract
+import fi.oph.scalaschema.extraction.ValidationError
+import org.json4s.jackson.JsonMethods
+
+object ValidationExample extends App {
+  implicit val context = ExtractionContext(SchemaFactory.default.createSchema(classOf[ValidationTestClass]))
+
+  println("*** Successful object extraction ***")
+  val validInput = JsonMethods.parse("""{"name": "john", "stuff": [1,2,3]}""")
+  val extractionResult: Either[List[ValidationError], ValidationTestClass] = extract[ValidationTestClass](validInput)
+  println(extractionResult)
+  println("*** Validation failure ***")
+  println(SchemaValidatingExtractor.extract[ValidationTestClass]("""{}"""))
+
+}
+
+case class ValidationTestClass(name: String, stuff: List[Int])
+
+```
 
 ### Maven
 

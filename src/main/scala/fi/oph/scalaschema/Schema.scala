@@ -35,7 +35,7 @@ trait ElementSchema extends Schema {
   def collectDefinitions: (Schema, List[SchemaWithClassName]) = (this, Nil)
 }
 
-case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
+case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchema // Why untyped lists?
 case class StringSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class NumberSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
