@@ -1,7 +1,7 @@
 package fi.oph.scalaschema
 
 import fi.oph.scalaschema.extraction.{ValidationError, _}
-import org.json4s.JsonAST.{JInt, JNothing, JObject, JString}
+import org.json4s.JsonAST._
 import org.scalatest.{FreeSpec, Matchers}
 
 class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelpers {
@@ -58,6 +58,8 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
     "Synthetic properties" - {
       "Are ignored" in {
         verifyExtractionRoundTrip(WithSyntheticProperties())
+        verifyValidation(JObject(), classOf[WithSyntheticProperties], Right(WithSyntheticProperties()))
+        verifyValidation(JObject(("field" -> JBool(true))), classOf[WithSyntheticProperties], Right(WithSyntheticProperties()))
       }
     }
   }
