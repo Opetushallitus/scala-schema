@@ -38,7 +38,7 @@ trait ElementSchema extends Schema {
 case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchema // Why untyped lists?
 case class StringSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
 case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
-case class NumberSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
+case class NumberSchema(numberType: Class[_], enumValues: Option[List[Any]] = None) extends ElementSchema
 case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false)
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
   override def getSchema(className: String): Option[SchemaWithClassName] = {
@@ -137,6 +137,6 @@ trait SchemaWithClassName extends Schema {
   def appliesToClass(k: Class[_]) = k.getName == fullClassName
 }
 
-case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil) extends ObjectWithMetadata[Property] {
+case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false) extends ObjectWithMetadata[Property] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
 }

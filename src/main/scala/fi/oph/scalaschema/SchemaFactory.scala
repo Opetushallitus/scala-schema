@@ -63,10 +63,12 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     "java.time.LocalDate" -> DateSchema(),
     "java.lang.String" -> StringSchema(),
     "scala.Boolean" -> BooleanSchema(),
-    "scala.Int" -> NumberSchema(),
-    "scala.Long" -> NumberSchema(),
-    "scala.Double" -> NumberSchema(),
-    "scala.Float" -> NumberSchema()
+    "scala.Int" -> NumberSchema(numberType = classOf[Int]),
+    "scala.Long" -> NumberSchema(numberType = classOf[Long]),
+    "scala.Double" -> NumberSchema(numberType = classOf[Double]),
+    "scala.Float" -> NumberSchema(numberType = classOf[Float]),
+    classOf[BigDecimal].getName -> NumberSchema(numberType = classOf[BigDecimal]),
+    classOf[BigInt].getName -> NumberSchema(numberType = classOf[BigInt])
   )
 
   private def addToState(tyep: SchemaWithClassName, state: ScanState) = {
@@ -108,15 +110,16 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
 
     state.foundTypes.add(className)
 
-    val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
+    val constructorParams: List[(ru.Symbol, Boolean)] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil).map((_, false))
 
-    val syntheticProperties: List[ru.Symbol] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
+    val syntheticProperties: List[(ru.Symbol, Boolean)] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
       .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
-      .filterNot(sym => constructorParams.map(_.name).contains(sym.name)) // <- remove if overridden in case class constructor
+      .filterNot(sym => constructorParams.map(_._1.name).contains(sym.name)) // <- remove if overridden in case class constructor
+      .map((_, true))
 
     val propertySymbols = constructorParams ++ syntheticProperties
 
-    val properties: List[Property] = propertySymbols.map { paramSymbol =>
+    val properties: List[Property] = propertySymbols.map { case (paramSymbol, synthetic) =>
       val term = paramSymbol.asTerm
       val termSchema = createSchema(term.typeSignature, state.childState)
       val termName: String = term.name.decoded.trim
@@ -126,7 +129,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
         case false =>
           None
       }
-      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil))
+      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil, synthetic))
       val matchingMethodsFromTraits = traits.flatMap (t => members(t)
         .filter(_.isMethod)
         .filter(_.asTerm.asMethod.name.toString == termName )

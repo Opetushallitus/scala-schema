@@ -2,9 +2,9 @@
 
 Generate a [JSON schema](http://json-schema.org/) from Scala classes 
 
-- Create schema from any case class
+- Create a Schema object from any `case class`
 - Export the schema as JSON
-- Use the schema object directly for efficient JSON validation
+- Use the schema object directly for efficient JSON validation ([#validation-and-extraction])
 - Extract JSON into case classes while validating on the way
 - Supports case classes, lists, strings, dates, numbers, booleans
 - Supports polymorphism via traits: finds trait implementations in same package
@@ -80,6 +80,17 @@ More examples and a pretty much full feature list can be found in this [test fil
 
 ### Validation and extraction
 
+You can use `SchemaValidatingExtractor` to consume a JSON input and produce either
+
+- a case class instance, or
+- itemized validation errors
+
+The beauty of this is that
+
+- It's much more efficient that validating using a separate JSON schema validator
+- It gives itemized, machine and human readable validation errors all of which point you to the exact location of the erroneous part in your JSON
+- You don't need to write custom Serializer object for choosing between the correct implementation of a `trait`, instead you just tag the identifying fields with `@Discriminator` annotation.
+
 ```scala
 
 package fi.oph.scalaschema
@@ -104,7 +115,14 @@ case class ValidationTestClass(name: String, stuff: List[Int])
 
 ```
 
-### Maven
+### How to use as dependency
+
+The `scala-schema` library is currently maintained in two branches for scala versions 2.11 and 2.12.
+
+It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to 
+depend on it anyway. Just follow the instructions below.
+
+#### Maven
 
 Add Jitpack.io as a repository:
 
@@ -126,7 +144,17 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.0_2.12</version>
+    <version>2.1.1_2.12</version>
   </dependency>
 </dependencies>
 ```
+
+#### SBT
+
+Add Jitpack.io resolver:
+
+    resolvers += "jitpack" at "https://jitpack.io",
+
+Then add scala-schema as dependency (use appropriate scala version suffix as below)
+
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.1.2_2.12"

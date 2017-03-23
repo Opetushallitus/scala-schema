@@ -10,12 +10,13 @@ object NumberExtractor {
     val extractionResult: Either[List[ValidationError], Number] = json match {
       // NOTE: Number types don't necessarily match correctly and because of type erasure, an Option[Int] may end up containing a Double.
       case JDouble(num: Double) => Right(num)
-      case JInt(num: BigInt) => Right(num.intValue)
-      case JDecimal(num: BigDecimal) => Right(num.doubleValue)
+      case JInt(num: BigInt) => Right(num)
+      case JDecimal(num: BigDecimal) => Right(num)
       case JLong(num) => Right(num.toLong)
-      case _ => Left(List(ValidationError(context.path, json, UnexpectedType("number"))))
+      case _ =>
+        Left(List(ValidationError(context.path, json, UnexpectedType("number"))))
     }
-    extractionResult.right.flatMap { number: Number =>
+    extractionResult.right.map(num => convertNumber(num, schema.numberType)).flatMap { number: Number =>
       context.ifValidating(((metadata ++ schema.metadata).collect {
         case MinValue(minValue) if number.doubleValue < minValue => ValidationError(context.path, json, SmallerThanMinimumValue(minValue))
         case MaxValue(maxValue) if number.doubleValue > maxValue => ValidationError(context.path, json, GreaterThanMaximumValue(maxValue))
@@ -27,6 +28,35 @@ object NumberExtractor {
         case Nil => Right(number)
         case errors => Left(errors)
       }
+    }
+  }
+
+
+  private def convertNumber(number: Number, klass: Class[_]): Number =  {
+    if (klass == classOf[Int] || klass == classOf[Integer]) {
+      number.intValue
+    } else if (klass == classOf[Float]) {
+      number.floatValue
+    } else if (klass == classOf[Double]) {
+      number.doubleValue
+    } else if (klass == classOf[Int]) {
+      number.intValue
+    } else if (klass == classOf[Long]) {
+      number.longValue
+    } else if (klass == classOf[BigInt]) {
+      if (!number.isInstanceOf[BigInt]) {
+        BigInt(number.longValue)
+      } else {
+        number
+      }
+    } else if (klass == classOf[BigDecimal]) {
+      if (!number.isInstanceOf[BigDecimal]) {
+        BigDecimal(number.doubleValue)
+      } else {
+        number
+      }
+    } else {
+      throw new UnsupportedOperationException("Unrecognized Number type: " + klass.getName)
     }
   }
 }
