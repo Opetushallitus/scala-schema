@@ -151,10 +151,11 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
     }
   }
 
-  private  def applyEnumValues(schema: Schema, newEnumValues: List[Any]): Schema = schema match {
-    case x: StringSchema => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
-    case x: BooleanSchema => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
-    case x: NumberSchema => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+  private def applyEnumValues(schema: Schema, newEnumValues: List[Any]): Schema = (schema, newEnumValues) match {
+    case (_, Nil) => schema
+    case (x: StringSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case (x: BooleanSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case (x: NumberSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
     case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
   }
 }
