@@ -126,7 +126,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>1.0</version>
+    <version>2.0_2.12</version>
   </dependency>
 </dependencies>
 ```
