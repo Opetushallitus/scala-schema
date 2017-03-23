@@ -21,7 +21,7 @@ object SchemaToJson {
     case DateSchema(enumValues) => JObject(List("type" -> JString("string"), "format" -> JString("date")) ++ toEnumValueProperty(enumValues))
     case StringSchema(enumValues) => withMinLength(simpleObjectToJson("string", enumValues), Some(1))
     case BooleanSchema(enumValues) => simpleObjectToJson("boolean", enumValues)
-    case NumberSchema(enumValues) => simpleObjectToJson("number", enumValues)
+    case NumberSchema(_, enumValues) => simpleObjectToJson("number", enumValues)
     case ListSchema(x) => JObject(("type") -> JString("array"), (("items" -> toJsonSchema(x))))
     case OptionalSchema(x) => toJsonSchemaWithoutMetadata(x)
     case t: ClassRefSchema => JObject(

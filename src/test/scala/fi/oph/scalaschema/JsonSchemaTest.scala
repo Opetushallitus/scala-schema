@@ -10,7 +10,7 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
     "Schema object model generation" in {
       schema should equal(ClassSchema("fi.oph.scalaschema.TestClass", List(
         Property("name", StringSchema()),
-        Property("stuff", ListSchema(NumberSchema())))
+        Property("stuff", ListSchema(NumberSchema(classOf[Int]))))
       ))
     }
     "JSON schema generation" in {
@@ -136,7 +136,7 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
       }
       "Can be performed after creation for artesanal schemas" in {
         val definitions: List[SchemaWithClassName] = List(schemaOf(classOf[NestedDefinitions]), AnyOfSchema(Nil, "someanyof", Nil, List(schemaOf(classOf[NestedDefinitions]))))
-        val schema = ClassSchema("test", List(Property("testprop", NumberSchema())), Nil, definitions).moveDefinitionsToTopLevel
+        val schema = ClassSchema("test", List(Property("testprop", NumberSchema(classOf[Int]))), Nil, definitions).moveDefinitionsToTopLevel
         jsonSchemaOf(schema) should equal("""{"type":"object","properties":{"testprop":{"type":"number"}},"id":"#test","additionalProperties":false,"title":"Test","required":["testprop"],"definitions":{"nesteddefinitions":{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"]},"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]},"someanyof":{"anyOf":[]}}}""")
       }
       "Can be performed after creation for AnyOf schemas" in {

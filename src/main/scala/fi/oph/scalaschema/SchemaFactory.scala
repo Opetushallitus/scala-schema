@@ -63,10 +63,12 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     "java.time.LocalDate" -> DateSchema(),
     "java.lang.String" -> StringSchema(),
     "scala.Boolean" -> BooleanSchema(),
-    "scala.Int" -> NumberSchema(),
-    "scala.Long" -> NumberSchema(),
-    "scala.Double" -> NumberSchema(),
-    "scala.Float" -> NumberSchema()
+    "scala.Int" -> NumberSchema(numberType = classOf[Int]),
+    "scala.Long" -> NumberSchema(numberType = classOf[Long]),
+    "scala.Double" -> NumberSchema(numberType = classOf[Double]),
+    "scala.Float" -> NumberSchema(numberType = classOf[Float]),
+    classOf[BigDecimal].getName -> NumberSchema(numberType = classOf[BigDecimal]),
+    classOf[BigInt].getName -> NumberSchema(numberType = classOf[BigInt])
   )
 
   private def addToState(tyep: SchemaWithClassName, state: ScanState) = {

@@ -20,13 +20,7 @@ object ObjectExtractor {
         errors match {
           case Nil =>
             val constructor = Class.forName(schema.fullClassName).getConstructors.apply(0)
-            val constructorParamsAndTypes: List[(Object, Class[_])] = propertyResults.map(_.right.get).asInstanceOf[List[Object]].zip(constructor.getParameterTypes)
-            val constructorParams = constructorParamsAndTypes.map {
-              case (number: Number, klass) =>
-                convertNumber(number, klass)
-              case (value, klass) => value
-            }.asInstanceOf[List[Object]]
-
+            val constructorParams: List[Object] = propertyResults.map(_.right.get).asInstanceOf[List[Object]]
             try {
               Right(constructor.newInstance(constructorParams: _*).asInstanceOf[AnyRef])
             } catch {
@@ -36,19 +30,6 @@ object ObjectExtractor {
           case _ => Left(errors)
         }
       case _ => Left(List(ValidationError(context.path, json, UnexpectedType("object"))))
-    }
-  }
-
-  private def convertNumber(number: Number, klass: Class[_]) =  {
-    if (klass == classOf[Int] || klass == classOf[Integer]) {
-      number.intValue()
-    } else if (klass == classOf[Float]) {
-      number.floatValue()
-    } else if (klass == classOf[Double]) {
-      number.doubleValue()
-    } else {
-      //println(s"Number conversion from ${number.getClass.getName} to ${klass.getName}")
-      number
     }
   }
 }
