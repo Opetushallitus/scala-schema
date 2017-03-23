@@ -2,9 +2,9 @@
 
 Generate a [JSON schema](http://json-schema.org/) from Scala classes 
 
-- Create schema from any case class
+- Create a Schema object from any `case class`
 - Export the schema as JSON
-- Use the schema object directly for efficient JSON validation
+- Use the schema object directly for efficient JSON validation ([#validation-and-extraction])
 - Extract JSON into case classes while validating on the way
 - Supports case classes, lists, strings, dates, numbers, booleans
 - Supports polymorphism via traits: finds trait implementations in same package
@@ -79,6 +79,17 @@ case class SyntheticCat() {
 More examples and a pretty much full feature list can be found in this [test file](src/test/scala/fi/oph/scalaschema/JsonSchemaTest.scala).
 
 ### Validation and extraction
+
+You can use `SchemaValidatingExtractor` to consume a JSON input and produce either
+
+- a case class instance, or
+- itemized validation errors
+
+The beauty of this is that
+
+- It's much more efficient that validating using a separate JSON schema validator
+- It gives itemized, machine and human readable validation errors all of which point you to the exact location of the erroneous part in your JSON
+- You don't need to write custom Serializer object for choosing between the correct implementation of a `trait`, instead you just tag the identifying fields with `@Discriminator` annotation.
 
 ```scala
 
