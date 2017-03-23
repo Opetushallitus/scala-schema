@@ -43,13 +43,20 @@ object NumberExtractor {
       number.intValue
     } else if (klass == classOf[Long]) {
       number.longValue
-    } else if (klass == classOf[BigInt] && !number.isInstanceOf[BigInt]) {
-      BigInt(number.longValue)
-    } else if (klass == classOf[BigDecimal] && !number.isInstanceOf[BigDecimal]) {
-      BigDecimal(number.doubleValue)
+    } else if (klass == classOf[BigInt]) {
+      if (!number.isInstanceOf[BigInt]) {
+        BigInt(number.longValue)
+      } else {
+        number
+      }
+    } else if (klass == classOf[BigDecimal]) {
+      if (!number.isInstanceOf[BigDecimal]) {
+        BigDecimal(number.doubleValue)
+      } else {
+        number
+      }
     } else {
-      println(s"Number conversion from ${number.getClass.getName} to ${klass.getName}")
-      number
+      throw new UnsupportedOperationException("Unrecognized Number type: " + klass.getName)
     }
   }
 }
