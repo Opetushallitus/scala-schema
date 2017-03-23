@@ -11,8 +11,8 @@
     <name>fi.vm.sade</name>
   </organization>
   <properties>
-      <scala.version>2.12.1</scala.version>
-      <json4s.version>3.5.0</json4s.version>
+      <scala.version>2.11.4</scala.version>
+      <json4s.version>3.3.0</json4s.version>
   </properties>
   <dependencies>
     <dependency>
@@ -32,17 +32,17 @@
     </dependency>
     <dependency>
       <groupId>org.json4s</groupId>
-      <artifactId>json4s-jackson_2.12</artifactId>
+      <artifactId>json4s-jackson_2.11</artifactId>
       <version>${json4s.version}</version>
     </dependency>
     <dependency>
       <groupId>org.json4s</groupId>
-      <artifactId>json4s-ast_2.12</artifactId>
+      <artifactId>json4s-ast_2.11</artifactId>
       <version>${json4s.version}</version>
     </dependency>
     <dependency>
       <groupId>org.json4s</groupId>
-      <artifactId>json4s-ext_2.12</artifactId>
+      <artifactId>json4s-ext_2.11</artifactId>
       <version>${json4s.version}</version>
     </dependency>
     <dependency>
@@ -64,8 +64,8 @@
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.12</artifactId>
-      <version>3.0.1</version>
+      <artifactId>scalatest_2.11</artifactId>
+      <version>2.2.4</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
