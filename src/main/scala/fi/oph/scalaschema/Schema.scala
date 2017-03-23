@@ -1,6 +1,6 @@
 package fi.oph.scalaschema
 
-import fi.oph.scalaschema.annotation.Title
+import fi.oph.scalaschema.annotation.{EnumValue, Title}
 import org.json4s.JsonAST.JValue
 
 sealed trait Schema {
@@ -41,13 +41,6 @@ case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSc
 case class NumberSchema(numberType: Class[_], enumValues: Option[List[Any]] = None) extends ElementSchema
 case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false)
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
-  override def getSchema(className: String): Option[SchemaWithClassName] = {
-    if (className == this.fullClassName) {
-      Some(this)
-    } else {
-      definitions.find(_.fullClassName == className)
-    }
-  }
 
   def getPropertyValue(property: Property, target: AnyRef): AnyRef = {
     target.getClass.getMethod(property.key).invoke(target)
@@ -104,6 +97,13 @@ trait SchemaWithDefinitions extends SchemaWithClassName {
     val (defschema2, defs) = definitionSchema.collectDefinitions
     defschema2.asInstanceOf[SchemaWithClassName] :: defs
   }
+  override def getSchema(className: String): Option[SchemaWithClassName] = {
+    if (className == this.fullClassName) {
+      Some(this)
+    } else {
+      definitions.find(_.fullClassName == className)
+    }
+  }
 }
 
 trait SchemaWithClassName extends Schema {
@@ -138,5 +138,23 @@ trait SchemaWithClassName extends Schema {
 }
 
 case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false) extends ObjectWithMetadata[Property] {
-  def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
+  def replaceMetadata(metadata: List[Metadata]) =
+    copy(
+      metadata = metadata,
+      schema = applyEnumValues(schema, metadata.collect({ case EnumValue(v) => v }))
+    )
+
+  private def addEnumValues(enumValues: Option[List[Any]], newEnumValues: List[Any]):Option[scala.List[Any]] = {
+    (enumValues.toList.flatten ++ newEnumValues) match {
+      case Nil => None
+      case values => Some(values)
+    }
+  }
+
+  private  def applyEnumValues(schema: Schema, newEnumValues: List[Any]): Schema = schema match {
+    case x: StringSchema => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case x: BooleanSchema => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case x: NumberSchema => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
+  }
 }

@@ -9,11 +9,14 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
-import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.{universe => ru}
+import scala.util.Try
 
 object SchemaFactory {
-  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive], classOf[RegularExpression], classOf[Discriminator], classOf[IgnoreInAnyOfDeserialization])
+  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description],
+    classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive],
+    classOf[RegularExpression],
+    classOf[EnumValue], classOf[Discriminator], classOf[IgnoreInAnyOfDeserialization])
   lazy val default = SchemaFactory(defaultAnnotations)
 }
 
@@ -233,15 +236,26 @@ object Annotations {
     val BooleanClass = classOf[Boolean]
 
     val constructor: Constructor[_] = annotationClass.getConstructors()(0)
-    val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex.map {
-      case (StringClass, index) => params(index)
-      case (DoubleClass, index) => new lang.Double(params(index).toDouble)
-      case (IntegerClass, index) => new lang.Integer(params(index).toDouble.toInt)
-      case (BooleanClass, index) => new lang.Boolean(params(index).toBoolean)
-      case (tyep, _) =>
-        // Only a handful of types supported at the moment
-        throw new IllegalArgumentException("Argument type not supported: " + tyep)
+
+    def parseAnnotationParam(klass: Class[_], value: String): AnyRef = (klass, value) match {
+      case (StringClass, value) => value
+      case (DoubleClass, value) => new lang.Double(value.toDouble)
+      case (IntegerClass, value) => new lang.Integer(value.toDouble.toInt)
+      case (BooleanClass, value) => new lang.Boolean(value.toBoolean)
+      case (tyep, value) =>
+        Try(parseAnnotationParam(IntegerClass, value.toInt.toString))
+          .orElse(Try(parseAnnotationParam(DoubleClass, value.toDouble.toString)))
+          .orElse(Try(parseAnnotationParam(BooleanClass, value.toBoolean.toString)))
+          .getOrElse {
+            // Just try String
+            parseAnnotationParam(StringClass, value)
+          }
+
     }
+
+    val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex
+      .map { case (klass, index) => parseAnnotationParam(klass, params(index))}
+
     constructor.newInstance(constructorParams:_*).asInstanceOf[StaticAnnotation]
   }
 

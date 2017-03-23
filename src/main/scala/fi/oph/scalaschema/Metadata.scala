@@ -6,7 +6,7 @@ import org.json4s.JsonAST.{JNothing, JObject, JString}
 import scala.annotation.StaticAnnotation
 
 trait Metadata extends StaticAnnotation with JsonMetadataSupport {
-  def applyMetadata(x: ObjectWithMetadata[_], schemaFactory: SchemaFactory) = x.appendMetadata(List(this.asInstanceOf[Metadata]))
+  def applyMetadata(x: ObjectWithMetadata[_], schemaFactory: SchemaFactory): ObjectWithMetadata[_] = x.appendMetadata(List(this.asInstanceOf[Metadata]))
   def appendMetadataToJsonSchema(obj: JObject): JObject
 }
 
