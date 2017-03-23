@@ -250,7 +250,6 @@ object Annotations {
             // Just try String
             parseAnnotationParam(StringClass, value)
           }
-
     }
 
     val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex
