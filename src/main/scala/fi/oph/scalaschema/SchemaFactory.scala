@@ -13,7 +13,7 @@ import scala.reflect.runtime.{universe => ru}
 import scala.util.Try
 
 object SchemaFactory {
-  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description],
+  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[DefaultValue],
     classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive],
     classOf[RegularExpression],
     classOf[EnumValue], classOf[Discriminator], classOf[IgnoreInAnyOfDeserialization])

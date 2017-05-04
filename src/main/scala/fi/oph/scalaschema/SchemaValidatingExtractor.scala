@@ -1,5 +1,6 @@
 package fi.oph.scalaschema
 
+import fi.oph.scalaschema.annotation.DefaultValue
 import fi.oph.scalaschema.extraction._
 import org.json4s._
 
@@ -30,11 +31,11 @@ object SchemaValidatingExtractor {
   def extract(json: JValue, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
     schema match {
       case os: OptionalSchema => OptionalExtractor.extractOptional(json, os, metadata)
-      case _ => extractRequired(json) { schema match {
+      case ss: StringSchema => StringExtractor.extract(json, ss, metadata)
+      case ns: NumberSchema => NumberExtractor.extract(json, ns, metadata)
+      case bs: BooleanSchema => BooleanExtractor.extract(json, bs, metadata)
+      case _ => extractRequired(json, metadata) { schema match {
         case ls: ListSchema => ListExtractor.extractList(json, ls, metadata)
-        case ss: StringSchema => StringExtractor.extractString(json, ss, metadata)
-        case ns: NumberSchema => NumberExtractor.extractNumber(json, ns, metadata)
-        case bs: BooleanSchema => BooleanExtractor.extractBoolean(json, bs, metadata)
         case ds: DateSchema => DateExtractor.extractDate(json, ds, metadata)
         case cs: SchemaWithClassName =>
           json match {
@@ -52,7 +53,7 @@ object SchemaValidatingExtractor {
     }
   }
 
-  private def extractRequired[T](json: JValue)(doExtract: => Either[List[ValidationError], T])(implicit context: ExtractionContext) = json match {
+  private def extractRequired[T](json: JValue, metadata: List[Metadata])(doExtract: => Either[List[ValidationError], T])(implicit context: ExtractionContext) = json match {
     case JNothing =>
       Left(List(ValidationError(context.path, json, MissingProperty())))
     case _ =>
