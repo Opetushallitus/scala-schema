@@ -5,8 +5,8 @@ import fi.oph.scalaschema.{ExtractionContext, Metadata, StringSchema}
 import org.json4s.JsonAST.JString
 import org.json4s._
 
-object StringExtractor {
-  def extractString(json: JValue, schema: StringSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], String] = json match {
+object StringExtractor extends ExtractorWithDefaultValueSupport[String, StringSchema]{
+  def extractExisting(json: JValue, schema: StringSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], String] = json match {
     case JString(stringValue) =>
       stringValue match {
         case "" if context.validate => Left(List(ValidationError(context.path, json, EmptyString())))

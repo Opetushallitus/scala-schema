@@ -1,7 +1,8 @@
 package fi.oph.scalaschema
 
+import fi.oph.scalaschema.annotation.DefaultValue
 import org.json4s.ext.JodaTimeSerializers
-import org.json4s.{DefaultFormats, Formats, Extraction}
+import org.json4s.{DefaultFormats, Extraction, Formats}
 import org.json4s.JsonAST._
 
 object SchemaToJson {
@@ -65,7 +66,7 @@ object SchemaToJson {
     })
   }
   private def toRequiredProperties(properties: List[Property]): Option[(String, JValue)] = {
-    val requiredProperties = properties.toList.filter(!_.schema.isInstanceOf[OptionalSchema])
+    val requiredProperties = properties.toList.filter(property => !property.schema.isInstanceOf[OptionalSchema] && !property.metadata.find{_.isInstanceOf[DefaultValue]}.isDefined)
     requiredProperties match {
       case Nil => None
       case _ => Some("required", JArray(requiredProperties.map{property => JString(property.key)}))

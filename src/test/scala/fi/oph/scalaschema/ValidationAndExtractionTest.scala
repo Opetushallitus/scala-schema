@@ -56,6 +56,17 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
         val bd: BigDecimal = result.bd.get
       }
     }
+    "@DefaultValue annotation" - {
+      "Booleans" in {
+        verifyValidation(JObject(), classOf[BooleansWithDefault], Right(BooleansWithDefault(true)))
+      }
+      "Strings" in {
+        verifyValidation(JObject(), classOf[NumbersWithDefault], Right(NumbersWithDefault(1)))
+      }
+      "Numbers" in {
+        verifyValidation(JObject(), classOf[StringsWithDefault], Right(StringsWithDefault("hello")))
+      }
+    }
     "Synthetic properties" - {
       "Are ignored" in {
         verifyExtractionRoundTrip(WithSyntheticProperties())

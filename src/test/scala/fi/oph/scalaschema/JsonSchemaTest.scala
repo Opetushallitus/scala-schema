@@ -3,7 +3,6 @@ package fi.oph.scalaschema
 import org.json4s.jackson._
 import org.scalatest.{FreeSpec, Matchers}
 
-
 class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
   "Simple example" - {
     val schema = SchemaFactory.default.createSchema(classOf[TestClass])
@@ -62,6 +61,11 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
       jsonSchemaOf(schemaOf(classOf[RequiredFields]).asInstanceOf[ClassSchema].copy(specialized = true)) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"additionalProperties":false,"title":"Required fields","required":["field"]}""")
     }
     "Annotations" - {
+      "@DefaultValue" - {
+        "Fields with @DefaultValue are treated as non-required" in {
+          jsonSchemaOf(classOf[BooleansWithDefault]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"(default value: true)"}},"id":"#booleanswithdefault","additionalProperties":false,"title":"Booleans with default"}""")
+        }
+      }
       "@Description" - {
         "for case class" in {
           jsonSchemaOf(classOf[WithDescription]) should equal("""{"type":"object","properties":{},"id":"#withdescription","additionalProperties":false,"title":"With description","description":"Boom boom boom"}""")

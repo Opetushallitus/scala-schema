@@ -5,8 +5,8 @@ import fi.oph.scalaschema.{ExtractionContext, Metadata, NumberSchema}
 import org.json4s.JsonAST.{JDecimal, JDouble, JInt, JLong}
 import org.json4s._
 
-object NumberExtractor {
-  def extractNumber(json: JValue, schema: NumberSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Number] = {
+object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSchema] {
+  def extractExisting(json: JValue, schema: NumberSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Number] = {
     val extractionResult: Either[List[ValidationError], Number] = json match {
       // NOTE: Number types don't necessarily match correctly and because of type erasure, an Option[Int] may end up containing a Double.
       case JDouble(num: Double) => Right(num)
@@ -30,7 +30,6 @@ object NumberExtractor {
       }
     }
   }
-
 
   private def convertNumber(number: Number, klass: Class[_]): Number =  {
     if (klass == classOf[Int] || klass == classOf[Integer]) {
