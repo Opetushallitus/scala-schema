@@ -111,7 +111,7 @@ trait SchemaWithClassName extends Schema {
   def simpleName: String = {
     simpleClassName.toLowerCase
   }
-  def titleName: String = {
+  def title: String = {
     this.metadata.collect{case Title(t) => t} match {
       case Nil =>
         simpleClassName.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize
@@ -143,6 +143,11 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
       metadata = metadata,
       schema = applyEnumValues(schema, metadata.collect({ case EnumValue(v) => v }))
     )
+
+  def title = metadata.flatMap {
+    case Title(t) => Some(t)
+    case _ => None
+  }.headOption.getOrElse(key.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize)
 
   private def addEnumValues(enumValues: Option[List[Any]], newEnumValues: List[Any]):Option[scala.List[Any]] = {
     (enumValues.toList.flatten ++ newEnumValues) match {

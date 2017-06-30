@@ -122,11 +122,11 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
 
     "Title" - {
       "CamelCase to words" in {
-        ClassRefSchema("com.foo.CamelCase", Nil).titleName should equal("Camel case")
+        ClassRefSchema("com.foo.CamelCase", Nil).title should equal("Camel case")
       }
 
       "Lodash (_) to dash (-)" in {
-        ClassRefSchema("foo.bar.Foo_Bar", Nil).titleName should equal("Foo-bar")
+        ClassRefSchema("foo.bar.Foo_Bar", Nil).title should equal("Foo-bar")
       }
 
       "Title annotation" in {
