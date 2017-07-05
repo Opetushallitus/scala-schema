@@ -150,7 +150,7 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
   }.headOption.getOrElse(key.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize)
 
   private def addEnumValues(enumValues: Option[List[Any]], newEnumValues: List[Any]):Option[scala.List[Any]] = {
-    (enumValues.toList.flatten ++ newEnumValues) match {
+    (enumValues.toList.flatten ++ newEnumValues).distinct match {
       case Nil => None
       case values => Some(values)
     }
