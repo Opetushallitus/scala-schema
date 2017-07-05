@@ -71,6 +71,7 @@ object AnyOfExtractor {
     val propertyPath = keyPath.concat(property.key)
     property.schema match {
       case s: OptionalSchema if !property.metadata.contains(Discriminator()) => Nil // Optional attribute are required only when marked with @Discriminator
+      case OptionalSchema(s) => propertyMatchers(keyPath, property.copy(schema = s)) // OptionalSchema with Discriminator => dig deeper
       case s: StringSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: NumberSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: BooleanSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))

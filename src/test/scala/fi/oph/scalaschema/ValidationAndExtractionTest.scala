@@ -107,6 +107,10 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
           verifyExtractionRoundTrip[DiscriminatorResolving](TypeA())
           verifyExtractionRoundTrip[DiscriminatorResolving](Type2())
         }
+        "@EnumValue annotation in optional @Discriminator field" in {
+          verifyExtractionRoundTrip[DiscriminatorResolving](TypeC())
+          verifyExtractionRoundTrip[DiscriminatorResolving](TypeD())
+        }
       }
     }
   }
@@ -137,6 +141,14 @@ case class TypeA(
 ) extends DiscriminatorResolving
 case class TypeB(
   @Discriminator @EnumValue("b") `type`: String = "b"
+) extends DiscriminatorResolving
+
+case class TypeC(
+  @Discriminator @EnumValue("c") optional: Option[String] = Some("c")
+) extends DiscriminatorResolving
+
+case class TypeD(
+  @Discriminator @EnumValue("d") optional: Option[String] = Some("d")
 ) extends DiscriminatorResolving
 
 case class Type1(
