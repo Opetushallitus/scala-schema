@@ -1,7 +1,14 @@
 package fi.oph.scalaschema
 
+import com.fasterxml.jackson.databind.JsonNode
 import org.json4s.jackson._
 import org.scalatest.{FreeSpec, Matchers}
+import com.github.fge.jackson.JsonLoader
+import com.github.fge.jsonschema.core.report.ListReportProvider
+import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
+import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
+import org.json4s.JsonAST.JObject
+import org.json4s.jackson.JsonMethods.asJsonNode
 
 class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
   "Simple example" - {
@@ -144,9 +151,9 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
         jsonSchemaOf(classOf[NestedDefinitions]) should equal("""{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"],"definitions":{"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
       }
       "Can be performed after creation for artesanal schemas" in {
-        val definitions: List[SchemaWithClassName] = List(schemaOf(classOf[NestedDefinitions]), AnyOfSchema(Nil, "someanyof", Nil, List(schemaOf(classOf[NestedDefinitions]))))
+        val definitions: List[SchemaWithClassName] = List(schemaOf(classOf[NestedDefinitions]), AnyOfSchema(List(schemaOf(classOf[Booleans])), "someanyof", Nil, List(schemaOf(classOf[NestedDefinitions]))))
         val schema = ClassSchema("test", List(Property("testprop", NumberSchema(classOf[Int]))), Nil, definitions).moveDefinitionsToTopLevel
-        jsonSchemaOf(schema) should equal("""{"type":"object","properties":{"testprop":{"type":"number"}},"id":"#test","additionalProperties":false,"title":"Test","required":["testprop"],"definitions":{"nesteddefinitions":{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"]},"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]},"someanyof":{"anyOf":[]}}}""")
+        jsonSchemaOf(schema) should equal("""{"type":"object","properties":{"testprop":{"type":"number"}},"id":"#test","additionalProperties":false,"title":"Test","required":["testprop"],"definitions":{"nesteddefinitions":{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"]},"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]},"someanyof":{"anyOf":[{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#booleans","additionalProperties":false,"title":"Booleans","required":["field"]}]}}}""")
       }
       "Can be performed after creation for AnyOf schemas" in {
         val schema = AnyOfSchema(List(schemaOf(classOf[NestedDefinitions])), "testing", Nil).moveDefinitionsToTopLevel
@@ -155,6 +162,14 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
     }
   }
   def jsonSchemaOf(c: Class[_]): String = jsonSchemaOf(schemaOf(c))
-  def jsonSchemaOf(s: Schema): String = JsonMethods.compact(s.toJson)
+  def jsonSchemaOf(s: Schema): String = {
+    val schemaJson = s.toJson
+    // Just check that the created schema is a valid JSON schema, ignore validation results
+    jsonSchemaFactory.getJsonSchema(asJsonNode(SchemaToJson.toJsonSchema(s))).validate(asJsonNode(JObject()))
+    JsonMethods.compact(schemaJson)
+  }
   def jsonSchemaPropertiesOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson \\ "properties")
+
+  private lazy val jsonSchemaFactory = JsonSchemaFactory.newBuilder.setReportProvider(new ListReportProvider(ERROR, FATAL)).freeze()
+  private lazy val validator: JsonValidator = JsonSchemaFactory.byDefault.getValidator
 }

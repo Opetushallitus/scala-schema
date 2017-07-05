@@ -74,6 +74,7 @@ case class ClassRefSchema(fullClassName: String, override val metadata: List[Met
   override def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
 }
 case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
+  if (alternatives.isEmpty) throw new RuntimeException("AnyOfSchema needs at least one alternative")
   def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
   override def collectDefinitions: (AnyOfSchema, List[SchemaWithClassName]) = {
