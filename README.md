@@ -4,7 +4,7 @@ Generate a [JSON schema](http://json-schema.org/) from Scala classes
 
 - Create a Schema object from any `case class`
 - Export the schema as JSON
-- Use the schema object directly for efficient JSON validation ([#validation-and-extraction])
+- Use the schema object directly for efficient JSON validation [see Validation and Extraction](#validation-and-extraction)
 - Extract JSON into case classes while validating on the way
 - Supports case classes, lists, strings, dates, numbers, booleans
 - Supports polymorphism via traits: finds trait implementations in same package
