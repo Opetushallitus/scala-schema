@@ -77,3 +77,4 @@ case class WithTraitFieldWithDescription(field: TraitsWithDescription)
 
 case class TestClass(name: String, stuff: List[Int])
 
+case class WithEnumValue(@EnumValue("a") a: String, @EnumValue("b") b: Option[String], @EnumValue("c") c: List[String])

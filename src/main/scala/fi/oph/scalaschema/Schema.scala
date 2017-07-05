@@ -161,6 +161,8 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
     case (x: StringSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
     case (x: BooleanSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
     case (x: NumberSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case (x: OptionalSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
+    case (x: ListSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
     case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
   }
 }

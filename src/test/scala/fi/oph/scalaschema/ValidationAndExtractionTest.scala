@@ -67,6 +67,16 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
         verifyValidation(JObject(), classOf[StringsWithDefault], Right(StringsWithDefault("hello")))
       }
     }
+    "@EnumValue annotation" - {
+      "Successful for strings, optionals and lists" in {
+        verifyExtractionRoundTrip(WithEnumValue("a", Some("b"), List("c")))
+        verifyExtractionRoundTrip(WithEnumValue("a", None, List()))
+      }
+      "incorrect enum for string" in {
+        verifyValidation(Map("a" -> "b", "c" -> List()), classOf[WithEnumValue], Left(List(ValidationError("a", JString("b"), EnumValueMismatch(List("a"))))))
+        verifyValidation(Map("a" -> "a", "c" -> List("b")), classOf[WithEnumValue], Left(List(ValidationError("c.0", JString("b"), EnumValueMismatch(List("c"))))))
+      }
+    }
     "Synthetic properties" - {
       "Are ignored" in {
         verifyExtractionRoundTrip(WithSyntheticProperties())
