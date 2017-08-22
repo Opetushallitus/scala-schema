@@ -20,6 +20,12 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
           ValidationError("stuff",JNothing,MissingProperty())
         )))
       }
+      "Unexpected fields validation" in {
+        verifyValidation(Map(("name" -> "john"), ("stuff" -> List(1)), ("extra" -> "hello")), classOf[TestClass], Left(List(
+          ValidationError("extra",JString("hello"),UnexpectedProperty())
+        )))
+      }
+
       "Field type validation" in {
         verifyValidation(Map(("name" -> 10), ("stuff", List("a", "b"))), classOf[TestClass], Left(List(
           ValidationError("name",JInt(10),UnexpectedType("string")),

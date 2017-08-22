@@ -15,10 +15,10 @@ object ObjectExtractor {
             val jsonValue = json \ property.key
             SchemaValidatingExtractor.extract(jsonValue, property.schema, property.metadata)(subContext)
           }
-        val unwantedProperties = values
+        val unexpectedProperties = values
           .filterNot(pair => schema.properties.find(_.key == pair._1).isDefined)
-          .map(pair => ValidationError(context.subPath(pair._1), pair._2, UnwantedProperty()))
-        val errors: List[ValidationError] = propertyResults.collect { case Left(errors) => errors }.flatten ++ unwantedProperties
+          .map(pair => ValidationError(context.subPath(pair._1), pair._2, UnexpectedProperty()))
+        val errors: List[ValidationError] = propertyResults.collect { case Left(errors) => errors }.flatten ++ unexpectedProperties
         errors match {
           case Nil =>
             val constructor = Class.forName(schema.fullClassName).getConstructors.apply(0)

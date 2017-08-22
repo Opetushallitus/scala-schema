@@ -155,7 +155,7 @@ object AnyOfExtractor {
           case JObject(values) =>
             values.toList.map(_._1).filterNot(keys.contains(_)) match {
               case Nil => Nil
-              case unwanted => List(withKeyPath(s"allowed properties [${keys.mkString(", ")}] do not contain [${unwanted.mkString(", ")}]"))
+              case unexpected => List(withKeyPath(s"allowed properties [${keys.mkString(", ")}] do not contain [${unexpected.mkString(", ")}]"))
             }
           case _ =>
             List(withKeyPath("object expected"))

@@ -6,7 +6,7 @@ case class ValidationError(path: String, value: JValue, error: ValidationRuleVio
 
 sealed trait ValidationRuleViolation
 case class MissingProperty(errorType: String = "missingProperty") extends ValidationRuleViolation
-case class UnwantedProperty(errorType: String = "unwantedProperty") extends ValidationRuleViolation
+case class UnexpectedProperty(errorType: String = "unexpectedProperty") extends ValidationRuleViolation
 case class UnexpectedType(expectedType: String, errorType: String = "unexpectedType") extends ValidationRuleViolation
 case class DateFormatMismatch(expectedFormat: String = "yyyy-MM-dd", errorType: String = "dateFormatMismatch") extends ValidationRuleViolation
 case class EmptyString(errorType: String = "emptyString") extends ValidationRuleViolation
