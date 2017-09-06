@@ -29,6 +29,7 @@ object Serializer {
           case _ => throw new RuntimeException("Schema not found for " + x + " as an implementation of " + s.fullClassName)
         }
       case s: OptionalSchema => serializeOption(s, x)
+      case s: ListSchema => serializeList(s, x)
       case s: StringSchema => serializeString(s, x)
       case s: NumberSchema => serializeNumber(s, x)
       case s: DateSchema => serializeDate(s, x)
@@ -40,6 +41,11 @@ object Serializer {
     case Some(x) => serializeWithSchema(x, s.itemSchema)
     case None => JNothing
     case _ => throw new RuntimeException("Not an Option: " + x)
+  }
+
+  private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext): JValue = x match {
+    case xs: List[_] => JArray(xs.map { x => serializeWithSchema(x, s.itemSchema)})
+    case _ => throw new RuntimeException("Not a List: " + x)
   }
 
   private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext): JValue = JObject(s.properties.flatMap { p =>

@@ -26,6 +26,15 @@ class SerializationSpec extends FreeSpec with Matchers {
     testSerialization(Booleans(true), """{"field":true}""")
   }
 
+  "lists" in {
+    testSerialization(Lists(List(1)), """{"things":[1]}""")
+  }
+
+  "options" in {
+    testSerialization(OptionalFields(None), """{}""")
+    testSerialization(OptionalFields(Some(true)), """{"field":true}""")
+  }
+
   def testSerialization[T](x: T, expected: String)(implicit tag: ClassTag[T]) = {
     val schema = SchemaFactory.default.createSchema(tag.runtimeClass)
     val jValue = Serializer.serialize(x)(SerializationContext(schema))
