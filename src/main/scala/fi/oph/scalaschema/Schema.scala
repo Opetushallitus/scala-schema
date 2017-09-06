@@ -88,6 +88,11 @@ case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: S
     val (thisSchemaWithoutDefs, allDefinitions) = this.collectDefinitions
     thisSchemaWithoutDefs.withDefinitions(allDefinitions.distinct)
   }
+  def findAlternative(obj: Any): Option[SchemaWithClassName] = {
+    alternatives.find { classType =>
+      classType.fullClassName == obj.getClass.getName
+    }
+  }
 }
 
 trait SchemaWithDefinitions extends SchemaWithClassName {
