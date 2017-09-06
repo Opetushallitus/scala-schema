@@ -35,6 +35,14 @@ class SerializationSpec extends FreeSpec with Matchers {
     testSerialization(OptionalFields(Some(true)), """{"field":true}""")
   }
 
+  "synthetic properties" in {
+    testSerialization(WithSyntheticProperties(), """{"field":true}""")
+  }
+
+  "overridden synthetic properties" in {
+    testSerialization(WithOverriddenSyntheticProperties(false), """{"field":false}""")
+  }
+
   def testSerialization[T](x: T, expected: String)(implicit tag: ClassTag[T]) = {
     val schema = SchemaFactory.default.createSchema(tag.runtimeClass)
     val jValue = Serializer.serialize(x)(SerializationContext(schema))

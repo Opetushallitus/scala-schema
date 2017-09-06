@@ -40,7 +40,7 @@ object Serializer {
   private def serializeOption(s: OptionalSchema, x: Any)(implicit context: SerializationContext): JValue = x match {
     case Some(x) => serializeWithSchema(x, s.itemSchema)
     case None => JNothing
-    case _ => throw new RuntimeException("Not an Option: " + x)
+    case x => serializeWithSchema(x, s.itemSchema)
   }
 
   private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext): JValue = x match {
