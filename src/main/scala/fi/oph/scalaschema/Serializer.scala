@@ -77,4 +77,4 @@ object Serializer {
   }
 }
 
-case class SerializationContext(rootSchema: SchemaWithClassName)
+case class SerializationContext(rootSchema: Schema)

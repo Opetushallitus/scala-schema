@@ -22,18 +22,6 @@ object AnyOfExtractor {
         (schema, criteria)
     }
 
-    /*
-    // Just debugging
-    mapping.foreach {
-      case (schema, criteria) => criteria.foreach { criterion =>
-        val errors = criterion.apply(json)
-        if (errors.nonEmpty) {
-          println(context.path + ": " + schema.simpleName + ": " + errors)
-        }
-      }
-    }
-    */
-
     matchingSchemas match {
       case Nil =>
         val allowedAlternatives: List[(String, List[String])] = mapping.map { case (schema, criteria) => (schema.simpleName, criteria.apply(json)) }
