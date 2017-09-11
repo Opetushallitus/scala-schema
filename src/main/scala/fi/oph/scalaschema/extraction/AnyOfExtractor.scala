@@ -6,13 +6,13 @@ import org.json4s.JsonAST.JObject
 import org.json4s._
 
 object AnyOfExtractor {
-  private def criteriaForSchema(schema: SchemaWithClassName)(implicit context: ExtractionContext) = context.criteriaCache.synchronized {
+  private def criteriaForSchema(schema: SchemaWithClassName)(implicit context: ExtractionContext, rootSchema: Schema) = context.criteriaCache.synchronized {
     context.criteriaCache.getOrElseUpdate(schema.fullClassName, {
       discriminatorCriteria(schema, KeyPath.root)
     })
   }
 
-  def extractAnyOf(json: JValue, as: AnyOfSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
+  def extractAnyOf(json: JValue, as: AnyOfSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
     val mapping: List[(SchemaWithClassName, CriteriaCollection)] = as.alternatives.filterNot(ignoredAlternative).map { schema =>
       (schema, criteriaForSchema(schema))
     }.sortBy(-_._2.weight)
@@ -42,7 +42,7 @@ object AnyOfExtractor {
     schema.metadata.contains(IgnoreInAnyOfDeserialization())
   }
 
-  private def discriminatorCriteria(schema: SchemaWithClassName, keyPath: KeyPath)(implicit context: ExtractionContext): CriteriaCollection = schema match {
+  private def discriminatorCriteria(schema: SchemaWithClassName, keyPath: KeyPath)(implicit context: ExtractionContext, rootSchema: Schema): CriteriaCollection = schema match {
     case s: ClassRefSchema =>
       discriminatorCriteria(SchemaResolver.resolveSchema(s), keyPath)
     case s: ClassSchema =>
@@ -55,7 +55,7 @@ object AnyOfExtractor {
       }
   }
 
-  private def propertyMatchers(keyPath:KeyPath, property: Property)(implicit context: ExtractionContext): List[DiscriminatorCriterion] = {
+  private def propertyMatchers(keyPath:KeyPath, property: Property)(implicit context: ExtractionContext, rootSchema: Schema): List[DiscriminatorCriterion] = {
     val propertyPath = keyPath.concat(property.key)
     property.schema match {
       case s: OptionalSchema if !property.metadata.contains(Discriminator()) => Nil // Optional attribute are required only when marked with @Discriminator
@@ -90,7 +90,7 @@ object AnyOfExtractor {
 
   trait DiscriminatorCriterion {
     def keyPath: KeyPath
-    def apply(value: JValue)(implicit context: ExtractionContext): List[String]
+    def apply(value: JValue)(implicit context: ExtractionContext, rootSchema: Schema): List[String]
     def description: String
     def withKeyPath(s: String) = keyPath match {
       case KeyPath(Nil) => s
@@ -102,12 +102,12 @@ object AnyOfExtractor {
 
   case class CriteriaCollection(criteria: List[DiscriminatorCriterion]) {
     lazy val weight = criteria.map(_.weight).sum
-    def apply(json: JValue)(implicit context: ExtractionContext) = criteria.flatMap(c => c.apply(json))
-    def matches(json: JValue)(implicit context: ExtractionContext) = apply(json).isEmpty
+    def apply(json: JValue)(implicit context: ExtractionContext, rootSchema: Schema) = criteria.flatMap(c => c.apply(json))
+    def matches(json: JValue)(implicit context: ExtractionContext, rootSchema: Schema) = apply(json).isEmpty
   }
 
   case class PropertyExists(val keyPath: KeyPath) extends DiscriminatorCriterion {
-    def apply(value: JValue)(implicit context: ExtractionContext): List[String] = keyPath(value) match {
+    def apply(value: JValue)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = keyPath(value) match {
       case JNothing => List(toString)
       case _ => Nil
     }
@@ -116,7 +116,7 @@ object AnyOfExtractor {
   }
 
   case class PropertyEnumValues(val keyPath: KeyPath, schema: Schema, enumValues: List[Any]) extends DiscriminatorCriterion {
-    def apply(value: JValue)(implicit context: ExtractionContext): List[String] = PropertyExists(keyPath)(value) match {
+    def apply(value: JValue)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = PropertyExists(keyPath)(value) match {
       case Nil =>
         val actualValue = SchemaValidatingExtractor.extract(keyPath(value), schema, Nil)
         actualValue match {
@@ -137,7 +137,7 @@ object AnyOfExtractor {
   }
 
   case class NoOtherPropertiesThan(keyPath: KeyPath, keys: List[String]) extends DiscriminatorCriterion {
-    def apply(value: JValue)(implicit context: ExtractionContext): List[String] = PropertyExists(keyPath)(value) match {
+    def apply(value: JValue)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = PropertyExists(keyPath)(value) match {
       case Nil =>
         keyPath(value) match {
           case JObject(values) =>

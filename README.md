@@ -23,7 +23,7 @@ import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods
 
 object ExampleApp extends App {
-  val schema: Schema = SchemaFactory.default.createSchema(classOf[Cat])
+  val schema: Schema = SchemaFactory.default.createSchema[Cat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
@@ -51,7 +51,7 @@ You can add support for your custom annotations too, if you wish. Like
 ```scala
 object ExampleWithCustomAnnotations extends App {
   val annotations = classOf[ReadOnly] :: SchemaFactory.defaultAnnotations
-  val schema: Schema = SchemaFactory(annotations).createSchema(classOf[AnnotatedCat])
+  val schema: Schema = SchemaFactory(annotations).createSchema[AnnotatedCat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
@@ -100,7 +100,7 @@ import fi.oph.scalaschema.extraction.ValidationError
 import org.json4s.jackson.JsonMethods
 
 object ValidationExample extends App {
-  implicit val context = ExtractionContext(SchemaFactory.default.createSchema(classOf[ValidationTestClass]))
+  implicit val context = ExtractionContext(SchemaFactory.default)
 
   println("*** Successful object extraction ***")
   val validInput = JsonMethods.parse("""{"name": "john", "stuff": [1,2,3]}""")
@@ -108,7 +108,6 @@ object ValidationExample extends App {
   println(extractionResult)
   println("*** Validation failure ***")
   println(SchemaValidatingExtractor.extract[ValidationTestClass]("""{}"""))
-
 }
 
 case class ValidationTestClass(name: String, stuff: List[Int])
@@ -144,7 +143,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.2.0_2.12</version>
+    <version>2.8.0_2.12</version>
   </dependency>
 </dependencies>
 ```
@@ -157,4 +156,4 @@ Add Jitpack.io resolver:
 
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
-    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.2.0_2.12"
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.8.0_2.12"

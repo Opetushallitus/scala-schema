@@ -4,6 +4,7 @@ import fi.oph.scalaschema.annotation.{Discriminator, EnumValue}
 import fi.oph.scalaschema.extraction.{ValidationError, _}
 import org.json4s.JsonAST._
 import org.scalatest.{FreeSpec, Matchers}
+import scala.reflect.runtime.{universe => ru}
 
 class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelpers {
   "Validation and extraction" - {
@@ -11,7 +12,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
       "Extraction" in {
         val testValue = TestClass("name", List(1, 2, 3))
         val json = Json.toJValue(testValue)
-        implicit val context = ExtractionContext(schemaOf(classOf[TestClass]))
+        implicit val context = ExtractionContext(SchemaFactory.default)
         SchemaValidatingExtractor.extract[TestClass](json) should equal(Right(testValue))
       }
       "Missing fields validation" in {
@@ -122,13 +123,13 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
   }
 
   private def verifyValidation(input: AnyRef, klass: Class[_], expectedResult: Either[List[ValidationError], AnyRef]) = {
-    implicit val context = ExtractionContext(schemaOf(klass))
+    implicit val context = ExtractionContext(SchemaFactory.default)
     val json = Json.toJValue(input)
     SchemaValidatingExtractor.extract(json, klass) should equal(expectedResult)
   }
 
-  private def verifyExtractionRoundTrip[T](input: T)(implicit mf: ClassManifest[T]): T = {
-    implicit val context = ExtractionContext(schemaOf(mf.runtimeClass))
+  private def verifyExtractionRoundTrip[T](input: T)(implicit tag: ru.TypeTag[T]): T = {
+    implicit val context = ExtractionContext(SchemaFactory.default)
     val json = Json.toJValue(input)
     val result = SchemaValidatingExtractor.extract[T](json)
     result should equal(Right(input))

@@ -1,11 +1,11 @@
 package fi.oph.scalaschema.extraction
 
-import fi.oph.scalaschema.{ClassSchema, ExtractionContext, Metadata, SchemaValidatingExtractor}
+import fi.oph.scalaschema._
 import org.json4s.JsonAST.JObject
 import org.json4s._
 
 object ObjectExtractor {
-  def extractObject(json: JValue, schema: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
+  def extractObject(json: JValue, schema: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
     json match {
       case JObject(values) =>
         val propertyResults: List[Either[List[ValidationError], Any]] = schema.properties
@@ -13,7 +13,7 @@ object ObjectExtractor {
           .map { property =>
             val subContext = context.subContext(property.key)
             val jsonValue = json \ property.key
-            SchemaValidatingExtractor.extract(jsonValue, property.schema, property.metadata)(subContext)
+            SchemaValidatingExtractor.extract(jsonValue, property.schema, property.metadata)(subContext, rootSchema)
           }
         val unexpectedProperties = values
           .filterNot(pair => schema.properties.find(_.key == pair._1).isDefined)

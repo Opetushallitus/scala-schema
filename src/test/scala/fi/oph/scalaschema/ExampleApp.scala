@@ -5,7 +5,7 @@ import org.json4s.JsonAST.{JObject, JValue}
 import org.json4s.jackson.JsonMethods
 
 object ExampleApp extends App {
-  val schema: Schema = SchemaFactory.default.createSchema(classOf[Cat])
+  val schema: Schema = SchemaFactory.default.createSchema[Cat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
@@ -15,7 +15,7 @@ case class Cat(name: String)
 
 
 object ExampleWithAnnotations extends App {
-  val schema: Schema = SchemaFactory.default.createSchema(classOf[AnnotatedCat])
+  val schema: Schema = SchemaFactory.default.createSchema[AnnotatedCat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
@@ -31,7 +31,7 @@ case class AnnotatedCat(
 
 object ExampleWithCustomAnnotations extends App {
   val annotations = classOf[ReadOnly] :: SchemaFactory.defaultAnnotations
-  val schema: Schema = SchemaFactory(annotations).createSchema(classOf[AnnotatedCat])
+  val schema: Schema = SchemaFactory(annotations).createSchema[AnnotatedCat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
@@ -47,7 +47,7 @@ case class ReadOnlyCat(
 )
 
 object ExampleWithSyntheticProperties extends App {
-  val schema: Schema = SchemaFactory.default.createSchema(classOf[SyntheticCat])
+  val schema: Schema = SchemaFactory.default.createSchema[SyntheticCat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
