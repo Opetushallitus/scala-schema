@@ -21,8 +21,10 @@ object SchemaFactory {
 }
 
 case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil) {
+  private val cachedSchemas: collection.mutable.Map[ru.Type, Schema] = collection.mutable.Map.empty
+
   def createSchema(className: String): SchemaWithClassName = {
-    createSchema(typeByName(className), ScanState()).asInstanceOf[SchemaWithClassName]
+    getCachedSchema(typeByName(className)).asInstanceOf[SchemaWithClassName]
   }
 
   def createSchema(clazz: Class[_]): SchemaWithClassName = {
@@ -30,7 +32,11 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
   }
 
   def createSchema[T](implicit tag: ru.TypeTag[T]): Schema = {
-    createSchema(tag.tpe, ScanState())
+    getCachedSchema(tag.tpe)
+  }
+
+  private def getCachedSchema(tpe: ru.Type) = synchronized {
+    cachedSchemas.getOrElseUpdate(tpe, createSchema(tpe, ScanState()))
   }
 
   private def typeByName(className: String): ru.Type = {
