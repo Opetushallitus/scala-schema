@@ -50,7 +50,10 @@ object Serializer {
 
   private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext): JValue = JObject(s.properties.flatMap { p =>
     val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
-    Some(JField(p.key, serializeWithSchema(value, p.schema)))
+    serializeWithSchema(value, p.schema) match {
+      case JNothing => None
+      case jValue => Some(JField(p.key, jValue))
+    }
   })
 
   private def serializeString(s: StringSchema, x: Any): JValue = x match {
