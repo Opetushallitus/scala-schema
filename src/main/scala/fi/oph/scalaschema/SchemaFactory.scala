@@ -29,6 +29,10 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     createSchema(clazz.getName)
   }
 
+  def createSchema[T](implicit tag: ru.TypeTag[T]): Schema = {
+    createSchema(tag.tpe, ScanState())
+  }
+
   private def typeByName(className: String): ru.Type = {
     val tyep: ru.Type = reflect.runtime.currentMirror.classSymbol(Class.forName(className)).toType
     tyep

@@ -13,11 +13,17 @@ import org.json4s.jackson.JsonMethods.asJsonNode
 class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
   "Simple example" - {
     val schema = SchemaFactory.default.createSchema(classOf[TestClass])
+    val expectedClassSchema = ClassSchema("fi.oph.scalaschema.TestClass", List(
+      Property("name", StringSchema()),
+      Property("stuff", ListSchema(NumberSchema(classOf[Int]))))
+    )
+
     "Schema object model generation" in {
-      schema should equal(ClassSchema("fi.oph.scalaschema.TestClass", List(
-        Property("name", StringSchema()),
-        Property("stuff", ListSchema(NumberSchema(classOf[Int]))))
-      ))
+      schema should equal(expectedClassSchema)
+    }
+    "Schema for list type" in {
+      val schema = SchemaFactory.default.createSchema[List[TestClass]]
+      schema should equal(ListSchema(expectedClassSchema))
     }
     "JSON schema generation" in {
       JsonMethods.compact(schema.toJson) should equal("""{"type":"object","properties":{"name":{"type":"string","minLength":1},"stuff":{"type":"array","items":{"type":"number"}}},"id":"#testclass","additionalProperties":false,"title":"Test class","required":["name","stuff"]}""")
