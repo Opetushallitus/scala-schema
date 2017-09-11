@@ -4,8 +4,7 @@ import java.time.LocalDate
 
 import org.json4s.JsonAST.{JObject, JString}
 import org.scalatest.{FreeSpec, Matchers}
-
-import scala.reflect.ClassTag
+import scala.reflect.runtime.{universe => ru}
 
 class SerializationSpec extends FreeSpec with Matchers {
   "strings" in {
@@ -45,17 +44,17 @@ class SerializationSpec extends FreeSpec with Matchers {
   }
 
   "empty optional" in {
-    val json = Serializer.serialize(WithOptionalDiscriminator("name", None))(serializationContext(classOf[TestTrait]))
+    val json = Serializer.serialize(WithOptionalDiscriminator("name", None), serializationContext)
     json should equal(JObject("name" -> JString("name")))
   }
 
-  def testSerialization[T](x: T, expected: String)(implicit tag: ClassTag[T]) = {
-    val jValue = Serializer.serialize(x)(serializationContext(tag.runtimeClass))
+  def testSerialization[T](x: T, expected: String)(implicit tag: ru.TypeTag[T]) = {
+    val jValue = Serializer.serialize(x, serializationContext)
     org.json4s.jackson.JsonMethods.compact(jValue) should equal(expected)
   }
 
-  private def serializationContext[T](clazz: Class[_]) =
-    SerializationContext(SchemaFactory.default.createSchema(clazz))
+  private def serializationContext[T] =
+    SerializationContext(SchemaFactory.default)
 }
 
 case class ThingContainingTrait(x: TraitsWithFields)

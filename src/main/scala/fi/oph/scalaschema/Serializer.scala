@@ -5,23 +5,22 @@ import java.time.LocalDate
 import fi.oph.scalaschema.extraction.SchemaNotFoundException
 import org.json4s.JsonAST._
 import org.json4s.{DefaultFormats, Extraction, Formats, JValue}
+import scala.reflect.runtime.{universe => ru}
 
 object Serializer {
   implicit val format: Formats = new DefaultFormats() {}
 
-  def serialize[T](obj: T)(implicit context: SerializationContext): JValue = {
-    val className = obj.getClass.getName
-    context.rootSchema.getSchema(className) match {
-      case Some(schema) => serializeWithSchema(obj, schema)
-      case _ => throw new SchemaNotFoundException("", className)
-    }
+  def serialize[T : ru.TypeTag](obj: T, context: SerializationContext): JValue = {
+    implicit val rootSchema = context.schemaFactory.createSchema[T]
+    implicit val ctx = context
+    serializeWithSchema(obj, rootSchema)
   }
 
-  private def serializeWithSchema(x: Any, schema: Schema)(implicit context: SerializationContext): JValue = {
+  private def serializeWithSchema(x: Any, schema: Schema)(implicit context: SerializationContext, rootSchema: Schema): JValue = {
     schema match {
       case s: ClassSchema => serializeObject(s, x)
       case s: ClassRefSchema =>
-        val actualSchema = context.rootSchema.getSchema(s.fullClassName).getOrElse(throw new SchemaNotFoundException("", s.fullClassName))
+        val actualSchema = rootSchema.getSchema(s.fullClassName).getOrElse(throw new SchemaNotFoundException("", s.fullClassName))
         serializeWithSchema(x, actualSchema)
       case s: AnyOfSchema =>
         s.findAlternative(x) match {
@@ -37,18 +36,18 @@ object Serializer {
     }
   }
 
-  private def serializeOption(s: OptionalSchema, x: Any)(implicit context: SerializationContext): JValue = x match {
+  private def serializeOption(s: OptionalSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
     case Some(x) => serializeWithSchema(x, s.itemSchema)
     case None => JNothing
     case x => serializeWithSchema(x, s.itemSchema)
   }
 
-  private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext): JValue = x match {
+  private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
     case xs: List[_] => JArray(xs.map { x => serializeWithSchema(x, s.itemSchema)})
     case _ => throw new RuntimeException("Not a List: " + x)
   }
 
-  private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext): JValue = JObject(s.properties.flatMap { p =>
+  private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = JObject(s.properties.flatMap { p =>
     val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
     serializeWithSchema(value, p.schema) match {
       case JNothing => None
@@ -77,4 +76,4 @@ object Serializer {
   }
 }
 
-case class SerializationContext(rootSchema: Schema)
+case class SerializationContext(schemaFactory: SchemaFactory)
