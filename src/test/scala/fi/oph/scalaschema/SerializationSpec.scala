@@ -44,16 +44,21 @@ class SerializationSpec extends FreeSpec with Matchers {
   }
 
   "empty optional" in {
-    val json = Serializer.serialize(WithOptionalDiscriminator("name", None), serializationContext)
+    val json = Serializer.serialize(WithOptionalDiscriminator("name", None), defaultContext)
     json should equal(JObject("name" -> JString("name")))
   }
 
-  def testSerialization[T](x: T, expected: String)(implicit tag: ru.TypeTag[T]) = {
-    val jValue = Serializer.serialize(x, serializationContext)
+  "custom field filtering" in {
+    def skipOtherThanA(s: ClassSchema, p: Property) = if (p.key == "a") List(p) else Nil
+    testSerialization(Numbers(1, 1l, 0.4f, 1.1), """{"a":1}""", context = SerializationContext(SchemaFactory.default, propertyProcessor = skipOtherThanA))
+  }
+
+  def testSerialization[T](x: T, expected: String, context: SerializationContext = defaultContext)(implicit tag: ru.TypeTag[T]) = {
+    val jValue = Serializer.serialize(x, context)
     org.json4s.jackson.JsonMethods.compact(jValue) should equal(expected)
   }
 
-  private def serializationContext[T] =
+  private def defaultContext[T] =
     SerializationContext(SchemaFactory.default)
 }
 

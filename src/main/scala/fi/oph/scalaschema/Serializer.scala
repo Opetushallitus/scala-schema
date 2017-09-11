@@ -2,9 +2,11 @@ package fi.oph.scalaschema
 
 import java.time.LocalDate
 
+import fi.oph.scalaschema.SchemaPropertyProcessor.SchemaPropertyProcessor
 import fi.oph.scalaschema.extraction.SchemaNotFoundException
 import org.json4s.JsonAST._
 import org.json4s.{DefaultFormats, Extraction, Formats, JValue}
+
 import scala.reflect.runtime.{universe => ru}
 
 object Serializer {
@@ -48,10 +50,12 @@ object Serializer {
   }
 
   private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = JObject(s.properties.flatMap { p =>
-    val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
-    serializeWithSchema(value, p.schema) match {
-      case JNothing => None
-      case jValue => Some(JField(p.key, jValue))
+    context.propertyProcessor(s, p).flatMap { p =>
+      val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
+      serializeWithSchema(value, p.schema) match {
+        case JNothing => None
+        case jValue => Some(JField(p.key, jValue))
+      }
     }
   })
 
@@ -76,4 +80,8 @@ object Serializer {
   }
 }
 
-case class SerializationContext(schemaFactory: SchemaFactory)
+case class SerializationContext(schemaFactory: SchemaFactory, propertyProcessor: SchemaPropertyProcessor = (s, p) => List(p))
+
+object SchemaPropertyProcessor {
+  type SchemaPropertyProcessor = (ClassSchema, Property) => List[Property]
+}
