@@ -53,6 +53,7 @@ object AnyOfExtractor {
         case props =>
           CriteriaCollection(props.flatMap(propertyMatchers(keyPath, _)))
       }
+    case _ => throw new RuntimeException(s"Only ClassSchema, ClassRefSchema supported as alternatives in AnyOfSchema (found ${schema})")
   }
 
   private def propertyMatchers(keyPath:KeyPath, property: Property)(implicit context: ExtractionContext, rootSchema: Schema): List[DiscriminatorCriterion] = {

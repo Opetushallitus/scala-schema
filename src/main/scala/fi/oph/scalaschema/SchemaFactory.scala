@@ -177,7 +177,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
 
   private def applyMetadataAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
     findAnnotations(symbol, annotationsSupported).asInstanceOf[List[Metadata]].foldLeft(x) {
-      case (current: T, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
+      case (current, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
     }
   }
 
