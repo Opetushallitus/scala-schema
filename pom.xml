@@ -6,7 +6,7 @@
   <packaging>jar</packaging>
   <description>scala-schema</description>
   <version>0.1.0-SNAPSHOT</version>
-  <name>JSON schema from scala classes</name>
+  <name>scala-schema</name>
   <organization>
     <name>fi.vm.sade</name>
   </organization>
