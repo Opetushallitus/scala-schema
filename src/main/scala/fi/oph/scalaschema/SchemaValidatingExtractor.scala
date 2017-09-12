@@ -28,13 +28,14 @@ object SchemaValidatingExtractor {
       case ss: StringSchema => StringExtractor.extract(json, ss, metadata)
       case ns: NumberSchema => NumberExtractor.extract(json, ns, metadata)
       case bs: BooleanSchema => BooleanExtractor.extract(json, bs, metadata)
+      case as: AnySchema => Right(json)
       case _ => extractRequired(json, metadata) { schema match {
         case ls: ListSchema => ListExtractor.extractList(json, ls, metadata)
         case ds: DateSchema => DateExtractor.extractDate(json, ds, metadata)
         case cs: SchemaWithClassName =>
           json match {
             case _: JObject =>
-              (context.customSerializerFor(cs), schema) match {
+              (context.customSerializerFor(cs), cs) match {
                 case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(json, cs, metadata)
                 case (_, cs: ClassRefSchema) => extract(json, SchemaResolver.resolveSchema(cs), metadata)
                 case (_, cs: ClassSchema) => ObjectExtractor.extractObject(json, cs, metadata)
@@ -43,6 +44,7 @@ object SchemaValidatingExtractor {
             case _ =>
               Left(List(ValidationError(context.path, json, UnexpectedType("object"))))
           }
+        case _ => throw new RuntimeException(s"Unexpected schema type ${schema}")
       }}
     }
   }

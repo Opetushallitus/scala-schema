@@ -68,6 +68,9 @@ class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
         jsonSchemaOf(classOf[TraitsInFields]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traits"}},"id":"#traitsinfields","additionalProperties":false,"title":"Traits in fields","required":["field"],"definitions":{"impla":{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},"implb":{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"},"traits":{"anyOf":[{"$ref":"#/definitions/impla"},{"$ref":"#/definitions/implb"}]}}}""")
       }
     }
+    "JValues" in {
+      jsonSchemaOf(classOf[WithJValue]) should equal("""{"type":"object","properties":{"x":{}},"id":"#withjvalue","additionalProperties":false,"title":"With j value","required":["x"]}""")
+    }
     "Specialized schema -> no #id" in {
       jsonSchemaOf(schemaOf(classOf[RequiredFields]).asInstanceOf[ClassSchema].copy(specialized = true)) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"additionalProperties":false,"title":"Required fields","required":["field"]}""")
     }

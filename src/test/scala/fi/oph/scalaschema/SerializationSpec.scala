@@ -48,6 +48,10 @@ class SerializationSpec extends FreeSpec with Matchers {
     json should equal(JObject("name" -> JString("name")))
   }
 
+  "JValue field" in {
+    testSerialization(WithJValue(JString("hello")), """{"x":"hello"}""")
+  }
+
   "custom field filtering" in {
     def skipOtherThanA(s: ClassSchema, p: Property) = if (p.key == "a") List(p) else Nil
     testSerialization(Numbers(1, 1l, 0.4f, 1.1), """{"a":1}""", context = SerializationContext(SchemaFactory.default, propertyProcessor = skipOtherThanA))

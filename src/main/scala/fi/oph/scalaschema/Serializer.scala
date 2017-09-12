@@ -5,6 +5,7 @@ import java.time.LocalDate
 import fi.oph.scalaschema.SchemaPropertyProcessor.SchemaPropertyProcessor
 import fi.oph.scalaschema.extraction.SchemaNotFoundException
 import org.json4s.JsonAST._
+import org.json4s.jackson.JsonMethods
 import org.json4s.{DefaultFormats, Extraction, Formats, JValue}
 
 import scala.reflect.runtime.{universe => ru}
@@ -35,6 +36,7 @@ object Serializer {
       case s: NumberSchema => serializeNumber(s, x)
       case s: DateSchema => serializeDate(s, x)
       case s: BooleanSchema => serializeBoolean(s, x)
+      case s: AnySchema => serializeAny(s, x)
     }
   }
 
@@ -77,6 +79,11 @@ object Serializer {
   private def serializeBoolean(s: BooleanSchema, x: Any): JValue = x match {
     case x: Boolean => JBool(x)
     case _ => throw new RuntimeException("Not a Boolean: " + x)
+  }
+
+  private def serializeAny(s: AnySchema, x: Any): JValue = x match {
+    case x: JValue => x
+    case _ => throw new RuntimeException("Not a JValue: " + x)
   }
 }
 

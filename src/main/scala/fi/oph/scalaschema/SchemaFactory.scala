@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor
 import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
+import org.json4s.JsonAST.JValue
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
@@ -81,7 +82,8 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     "scala.Double" -> NumberSchema(numberType = classOf[Double]),
     "scala.Float" -> NumberSchema(numberType = classOf[Float]),
     classOf[BigDecimal].getName -> NumberSchema(numberType = classOf[BigDecimal]),
-    classOf[BigInt].getName -> NumberSchema(numberType = classOf[BigInt])
+    classOf[BigInt].getName -> NumberSchema(numberType = classOf[BigInt]),
+    "org.json4s.JsonAST.JValue" -> AnySchema()
   )
 
   private def addToState(tyep: SchemaWithClassName, state: ScanState) = {
@@ -177,7 +179,7 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
 
   private def applyMetadataAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
     findAnnotations(symbol, annotationsSupported).asInstanceOf[List[Metadata]].foldLeft(x) {
-      case (current: T, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
+      case (current, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
     }
   }
 

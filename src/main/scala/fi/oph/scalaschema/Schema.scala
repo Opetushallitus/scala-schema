@@ -34,11 +34,11 @@ case class ListSchema(itemSchema: Schema) extends Schema {
 }
 
 // Marker trait for schemas of actual elements (not optional/list wrappers)
-trait ElementSchema extends Schema {
+sealed trait ElementSchema extends Schema {
   def mapItems(f: ElementSchema => ElementSchema): Schema = f(this)
   def collectDefinitions: (Schema, List[SchemaWithClassName]) = (this, Nil)
 }
-trait SimpleSchema extends ElementSchema {
+sealed trait SimpleSchema extends ElementSchema {
   override def getSchema(className: String): Option[SchemaWithClassName] = None
 }
 case class DateSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema // Why untyped lists?
@@ -101,7 +101,7 @@ case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: S
   }
 }
 
-trait SchemaWithDefinitions extends SchemaWithClassName {
+sealed trait SchemaWithDefinitions extends SchemaWithClassName {
   def definitions: List[SchemaWithClassName]
   def withDefinitions(definitions: List[SchemaWithClassName]): SchemaWithDefinitions
   def moveDefinitionsToTopLevel: SchemaWithDefinitions
@@ -118,7 +118,7 @@ trait SchemaWithDefinitions extends SchemaWithClassName {
   }
 }
 
-trait SchemaWithClassName extends Schema {
+sealed trait SchemaWithClassName extends Schema {
   def fullClassName: String
   def simpleName: String = {
     simpleClassName.toLowerCase
@@ -177,4 +177,8 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
     case (x: ListSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
     case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
   }
+}
+
+case class AnySchema() extends ElementSchema {
+  override def getSchema(className: String): Option[SchemaWithClassName] = None
 }
