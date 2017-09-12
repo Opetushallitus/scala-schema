@@ -77,3 +77,17 @@ case class WithTraitFieldWithDescription(field: TraitsWithDescription)
 
 case class TestClass(name: String, stuff: List[Int])
 
+trait TestTrait {
+  def name: String
+}
+case class WithOptionalDiscriminator(
+  name: String,
+  @Discriminator
+  id: Option[String]
+) extends TestTrait
+
+trait WithEnumerableFieldsAB {
+  @EnumValue("a") def a: String
+  @EnumValue("b") def b: Option[String]
+}
+case class WithEnumValue(@EnumValue("a") a: String, b: Option[String], @EnumValue("c") c: List[String]) extends WithEnumerableFieldsAB

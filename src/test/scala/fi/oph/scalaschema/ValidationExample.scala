@@ -5,7 +5,7 @@ import fi.oph.scalaschema.extraction.ValidationError
 import org.json4s.jackson.JsonMethods
 
 object ValidationExample extends App {
-  implicit val context = ExtractionContext(SchemaFactory.default.createSchema(classOf[ValidationTestClass]))
+  implicit val context = ExtractionContext(SchemaFactory.default)
 
   println("*** Successful object extraction ***")
   val validInput = JsonMethods.parse("""{"name": "john", "stuff": [1,2,3]}""")

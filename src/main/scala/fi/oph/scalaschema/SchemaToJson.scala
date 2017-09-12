@@ -34,7 +34,7 @@ object SchemaToJson {
       ++ (if (!t.specialized) { List(("id" -> JString("#" + t.simpleName))) } else Nil )
       ++ List(
       ("additionalProperties" -> JBool(false)),
-      ("title" -> JString(t.titleName))
+      ("title" -> JString(t.title))
     ) ++ toRequiredProperties(t.properties).toList
       ++ toDefinitionProperty(t.definitions).toList
     )

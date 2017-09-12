@@ -9,6 +9,7 @@ sealed trait Schema {
   def toJson: JValue = SchemaToJson.toJsonSchema(this)
   // Returns this schema with definitions removed, plus list of definitions removed
   def collectDefinitions: (Schema, List[SchemaWithClassName])
+  def getSchema(className: String): Option[SchemaWithClassName]
 }
 
 case class OptionalSchema(itemSchema: Schema) extends Schema {
@@ -18,6 +19,8 @@ case class OptionalSchema(itemSchema: Schema) extends Schema {
     val (itemSchema, defs) = this.itemSchema.collectDefinitions
     (OptionalSchema(itemSchema), defs)
   }
+
+  override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
 }
 
 case class ListSchema(itemSchema: Schema) extends Schema {
@@ -27,6 +30,7 @@ case class ListSchema(itemSchema: Schema) extends Schema {
     val (itemSchema, defs) = this.itemSchema.collectDefinitions
     (ListSchema(itemSchema), defs)
   }
+  override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
 }
 
 // Marker trait for schemas of actual elements (not optional/list wrappers)
@@ -34,11 +38,13 @@ trait ElementSchema extends Schema {
   def mapItems(f: ElementSchema => ElementSchema): Schema = f(this)
   def collectDefinitions: (Schema, List[SchemaWithClassName]) = (this, Nil)
 }
-
-case class DateSchema(enumValues: Option[List[Any]] = None) extends ElementSchema // Why untyped lists?
-case class StringSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
-case class BooleanSchema(enumValues: Option[List[Any]] = None) extends ElementSchema
-case class NumberSchema(numberType: Class[_], enumValues: Option[List[Any]] = None) extends ElementSchema
+trait SimpleSchema extends ElementSchema {
+  override def getSchema(className: String): Option[SchemaWithClassName] = None
+}
+case class DateSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema // Why untyped lists?
+case class StringSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema
+case class BooleanSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema
+case class NumberSchema(numberType: Class[_], enumValues: Option[List[Any]] = None) extends SimpleSchema
 case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false)
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
 
@@ -74,6 +80,7 @@ case class ClassRefSchema(fullClassName: String, override val metadata: List[Met
   override def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
 }
 case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
+  if (alternatives.isEmpty) throw new RuntimeException("AnyOfSchema needs at least one alternative")
   def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
   override def collectDefinitions: (AnyOfSchema, List[SchemaWithClassName]) = {
@@ -86,6 +93,11 @@ case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: S
   def moveDefinitionsToTopLevel: AnyOfSchema = {
     val (thisSchemaWithoutDefs, allDefinitions) = this.collectDefinitions
     thisSchemaWithoutDefs.withDefinitions(allDefinitions.distinct)
+  }
+  def findAlternative(obj: Any): Option[SchemaWithClassName] = {
+    alternatives.find { classType =>
+      classType.fullClassName == obj.getClass.getName
+    }
   }
 }
 
@@ -111,7 +123,7 @@ trait SchemaWithClassName extends Schema {
   def simpleName: String = {
     simpleClassName.toLowerCase
   }
-  def titleName: String = {
+  def title: String = {
     this.metadata.collect{case Title(t) => t} match {
       case Nil =>
         simpleClassName.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize
@@ -144,8 +156,13 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
       schema = applyEnumValues(schema, metadata.collect({ case EnumValue(v) => v }))
     )
 
+  def title = metadata.flatMap {
+    case Title(t) => Some(t)
+    case _ => None
+  }.headOption.getOrElse(key.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize)
+
   private def addEnumValues(enumValues: Option[List[Any]], newEnumValues: List[Any]):Option[scala.List[Any]] = {
-    (enumValues.toList.flatten ++ newEnumValues) match {
+    (enumValues.toList.flatten ++ newEnumValues).distinct match {
       case Nil => None
       case values => Some(values)
     }
@@ -156,6 +173,8 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
     case (x: StringSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
     case (x: BooleanSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
     case (x: NumberSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case (x: OptionalSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
+    case (x: ListSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
     case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
   }
 }

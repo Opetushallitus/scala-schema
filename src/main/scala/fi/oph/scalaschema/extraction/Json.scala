@@ -2,6 +2,7 @@ package fi.oph.scalaschema.extraction
 
 import org.json4s.jackson.Serialization
 import org.json4s.{Extraction, _}
+import scala.reflect.runtime.{universe => ru}
 
 object Json {
   implicit val genericFormats: Formats =  new DefaultFormats {
@@ -21,7 +22,7 @@ object Json {
     Serialization.writePretty(x);
   }
 
-  def read[A](json: String)(implicit mf : scala.reflect.Manifest[A]) : A = {
+  def read[A](json: String)(implicit tag: ru.TypeTag[A]) : A = {
     Serialization.read(json)
   }
 

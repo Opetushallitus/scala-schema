@@ -16,7 +16,7 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
       case _ =>
         Left(List(ValidationError(context.path, json, UnexpectedType("number"))))
     }
-    extractionResult.right.map(num => convertNumber(num, schema.numberType)).flatMap { number: Number =>
+    extractionResult.right.map(num => convertNumber(num, schema.numberType)).right.flatMap { number: Number =>
       context.ifValidating(((metadata ++ schema.metadata).collect {
         case MinValue(minValue) if number.doubleValue < minValue => ValidationError(context.path, json, SmallerThanMinimumValue(minValue))
         case MaxValue(maxValue) if number.doubleValue > maxValue => ValidationError(context.path, json, GreaterThanMaximumValue(maxValue))
