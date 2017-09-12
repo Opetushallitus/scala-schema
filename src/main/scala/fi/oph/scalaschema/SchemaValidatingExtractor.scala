@@ -1,6 +1,7 @@
 package fi.oph.scalaschema
 import fi.oph.scalaschema.extraction._
 import org.json4s._
+import org.json4s.jackson.JsonMethods
 
 import scala.reflect.runtime.{universe => ru}
 
@@ -13,7 +14,7 @@ object SchemaValidatingExtractor {
   }
 
   def extract[T](json: String)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
-    extract(Json.read[JValue](json))
+    extract(JsonMethods.parse(json))
   }
 
   def extract(json: JValue, klass: Class[_])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
