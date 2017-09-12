@@ -188,7 +188,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.8.0_2.12</version>
+    <version>2.9.0_2.12</version>
   </dependency>
 </dependencies>
 ```
@@ -201,4 +201,4 @@ Add Jitpack.io resolver:
 
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
-    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.8.0_2.12"
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.9.0_2.12"
