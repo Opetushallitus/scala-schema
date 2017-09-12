@@ -4,8 +4,8 @@ Generate a [JSON schema](http://json-schema.org/) from Scala classes
 
 - Create a Schema object from any `case class`
 - Export the schema as JSON
-- Use the schema object directly for efficient JSON validation [see Validation and Extraction](#validation-and-extraction)
-- Extract JSON into case classes while validating on the way
+- Use the schema object directly for efficient [JSON Validation and extraction into Scala objects](#validation-and-extraction), with machine and human-friendly validation error messages.
+- [Serialize Scala objects](#serialization) into JSON. Do this way faster than with json4s serialization mechanism.
 - Supports case classes, lists, strings, dates, numbers, booleans
 - Supports polymorphism via traits: finds trait implementations in same package
 - Customize schema with annotations (like min/max size, description)
@@ -87,7 +87,7 @@ You can use `SchemaValidatingExtractor` to consume a JSON input and produce eith
 
 The beauty of this is that
 
-- It's much more efficient that validating using a separate JSON schema validator
+- It's much more efficient than validating using a separate JSON schema validator
 - It gives itemized, machine and human readable validation errors all of which point you to the exact location of the erroneous part in your JSON
 - You don't need to write custom Serializer object for choosing between the correct implementation of a `trait`, instead you just tag the identifying fields with `@Discriminator` annotation.
 
@@ -113,6 +113,51 @@ object ValidationExample extends App {
 case class ValidationTestClass(name: String, stuff: List[Int])
 
 ```
+
+The `ExtractionContext` object created in the example above is used by the `scala-schema` extraction mechanism to cache
+some information to make subsequent extractions faster. Hence it makes sense to store this object in a variable.
+
+### Serialization
+
+Use your schema to serialize your Scala objects into JSON. This is more efficient than using then json4s serialization, because we're
+using a preprocessed schema.
+
+```scala
+case class Zoo(animals: List[Animal])
+case class Animal(name: String, age: Int)
+
+object SerializationExample extends App {
+  val context = SerializationContext(SchemaFactory.default)
+  val zoo = Zoo(List(Animal("giraffe", 23)))
+  val serialized: JValue = Serializer.serialize(zoo, context)
+  val stringValue: String = JsonMethods.pretty(serialized)
+  println(stringValue)
+}
+```
+
+You can also apply custom processing to object fields:
+
+```
+object CustomSerializationExample extends App {
+  def hideAge(schema: ClassSchema, property: Property) = if (property.key == "age") Nil else List(property)
+  val context = SerializationContext(SchemaFactory.default, hideAge)
+  println(JsonMethods.pretty(Serializer.serialize(zoo, context)))
+}
+```
+
+In the above example, all fields with the name "age" are hidden.
+
+### Schemas and Factories
+
+Now that you've read this far, I'll share some thoughts on schemas and factories.
+
+A `Schema` represents your object model and can be exported as a JSON schema as described above. Schemas are typically created
+automatically from your case classes using a `SchemaFactory`. As shown above, you can use annotations to customize how a schema is created,
+and also pass information about your custom annotations to your `SchemaFactory`. 
+
+The factory will *cache the created schemas* so that
+subsequent requests for a certain schema will be super fast. Therefore you should store your schema factory in a variable, 
+but you don't need to store the individual schemas.
 
 ### How to use as dependency
 
