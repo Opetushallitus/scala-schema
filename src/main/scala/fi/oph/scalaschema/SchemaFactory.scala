@@ -2,11 +2,14 @@ package fi.oph.scalaschema
 
 import java.lang
 import java.lang.reflect.Constructor
+import java.sql.Timestamp
+import java.time.{LocalDate, ZonedDateTime}
+import java.util.Date
 
 import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
-import org.json4s.JsonAST.JValue
+import org.joda.time.DateTime
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
@@ -72,9 +75,11 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
   }
 
   private lazy val schemaTypeForScala = Map(
-    "org.joda.time.DateTime" -> DateSchema(),
-    "java.util.Date" -> DateSchema(),
-    "java.time.LocalDate" -> DateSchema(),
+    "org.joda.time.DateTime" -> DateSchema(dateType = classOf[DateTime]),
+    "java.util.Date" -> DateSchema(dateType = classOf[Date]),
+    "java.sql.Timestamp" -> DateSchema(dateType = classOf[Timestamp]),
+    "java.time.LocalDate" -> DateSchema(dateType = classOf[LocalDate]),
+    "java.time.ZonedDateTime" -> DateSchema(dateType = classOf[ZonedDateTime]),
     "java.lang.String" -> StringSchema(),
     "scala.Boolean" -> BooleanSchema(),
     "scala.Int" -> NumberSchema(numberType = classOf[Int]),

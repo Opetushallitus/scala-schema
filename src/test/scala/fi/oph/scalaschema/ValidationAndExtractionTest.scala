@@ -1,7 +1,12 @@
 package fi.oph.scalaschema
 
+import java.sql.Timestamp
+import java.time.{LocalDate, ZonedDateTime}
+import java.util.Date
+
 import fi.oph.scalaschema.annotation.{Discriminator, EnumValue}
 import fi.oph.scalaschema.extraction.{ValidationError, _}
+import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods
 import org.scalatest.{FreeSpec, Matchers}
@@ -34,6 +39,16 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
           ValidationError("stuff.1",JString("b"),UnexpectedType("number"))
         )))
       }
+    }
+    "Dates" in {
+      val dates = Dates(
+        LocalDate.parse("2015-12-30"),
+        ZonedDateTime.parse("1987-01-23T00:33:23Z"),
+        Date.from(java.time.ZonedDateTime.parse("1977-03-13T13:42:11Z").toInstant),
+        Timestamp.from(java.time.ZonedDateTime.parse("2007-08-23T10:43:21Z").toInstant),
+        ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime("2017-09-13T12:43:21Z")
+      )
+      verifyExtractionRoundTrip(dates)
     }
     "Numbers" - {
       "As case class fields" in {

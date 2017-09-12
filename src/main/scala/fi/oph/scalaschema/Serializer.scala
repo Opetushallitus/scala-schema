@@ -1,11 +1,14 @@
 package fi.oph.scalaschema
 
-import java.time.LocalDate
+import java.time.format.DateTimeFormatter.ISO_INSTANT
+import java.time.{LocalDate, ZoneId, ZonedDateTime}
+import java.util.Date
 
 import fi.oph.scalaschema.SchemaPropertyProcessor.SchemaPropertyProcessor
 import fi.oph.scalaschema.extraction.SchemaNotFoundException
+import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST._
-import org.json4s.jackson.JsonMethods
 import org.json4s.{DefaultFormats, Extraction, Formats, JValue}
 
 import scala.reflect.runtime.{universe => ru}
@@ -73,7 +76,10 @@ object Serializer {
 
   private def serializeDate(s: DateSchema, x: Any): JValue = x match {
     case x: LocalDate => JString(x.toString)
-    case _ => throw new RuntimeException("Not a LocalDate: " + x)
+    case x: DateTime => JString(ISODateTimeFormat.dateTimeNoMillis.print(x))
+    case x: Date => JString(ISO_INSTANT.format(ZonedDateTime.ofInstant(x.toInstant, ZoneId.of("UTC"))))
+    case x: ZonedDateTime => JString(x.toString)
+    case _ => throw new RuntimeException("Not a date: " + x)
   }
 
   private def serializeBoolean(s: BooleanSchema, x: Any): JValue = x match {
