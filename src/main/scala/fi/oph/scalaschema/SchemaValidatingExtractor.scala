@@ -27,6 +27,7 @@ object SchemaValidatingExtractor {
       case ss: StringSchema => StringExtractor.extract(json, ss, metadata)
       case ns: NumberSchema => NumberExtractor.extract(json, ns, metadata)
       case bs: BooleanSchema => BooleanExtractor.extract(json, bs, metadata)
+      case as: AnySchema => Right(json)
       case _ => extractRequired(json, metadata) { schema match {
         case ls: ListSchema => ListExtractor.extractList(json, ls, metadata)
         case ds: DateSchema => DateExtractor.extractDate(json, ds, metadata)

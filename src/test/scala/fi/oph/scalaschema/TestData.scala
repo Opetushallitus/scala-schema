@@ -3,6 +3,7 @@ package fi.oph.scalaschema
 import java.time.LocalDate
 
 import fi.oph.scalaschema.annotation._
+import org.json4s.JValue
 
 case class RequiredFields(field: Boolean)
 case class OptionalFields(field: Option[Boolean])
@@ -91,3 +92,4 @@ trait WithEnumerableFieldsAB {
   @EnumValue("b") def b: Option[String]
 }
 case class WithEnumValue(@EnumValue("a") a: String, b: Option[String], @EnumValue("c") c: List[String]) extends WithEnumerableFieldsAB
+case class WithJValue(x: JValue)

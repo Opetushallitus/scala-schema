@@ -178,3 +178,7 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
     case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
   }
 }
+
+case class AnySchema() extends ElementSchema {
+  override def getSchema(className: String): Option[SchemaWithClassName] = None
+}

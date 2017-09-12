@@ -63,6 +63,9 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
         val bd: BigDecimal = result.bd.get
       }
     }
+    "JValue fields" in {
+      verifyExtractionRoundTrip(WithJValue(JString("boo")))
+    }
     "@DefaultValue annotation" - {
       "Booleans" in {
         verifyValidation(JObject(), classOf[BooleansWithDefault], Right(BooleansWithDefault(true)))
