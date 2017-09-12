@@ -1,5 +1,5 @@
 package fi.oph.scalaschema
 
-trait TestHelpers {
+object TestHelpers {
   def schemaOf(c: Class[_]) = SchemaFactory.default.createSchema(c)
 }

@@ -23,7 +23,7 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
         case MinValueExclusive(minValue) if number.doubleValue <= minValue => ValidationError(context.path, json, SmallerThanOrEqualToExclusiveMinimumValue(minValue))
         case MaxValueExclusive(maxValue) if number.doubleValue >= maxValue => ValidationError(context.path, json, GreaterThanOrEqualToExclusiveMaximumValue(maxValue))
       })) ++ {
-        EnumValues.verifyEnumValue(schema.enumValues, number).left.getOrElse(Nil)
+        EnumValues.verifyEnumValue(schema.enumValues, number, json).left.getOrElse(Nil)
       } match {
         case Nil => Right(number)
         case errors => Left(errors)

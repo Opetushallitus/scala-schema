@@ -3,12 +3,13 @@ package fi.oph.scalaschema
 import com.github.fge.jsonschema.core.report.ListReportProvider
 import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
+import fi.oph.scalaschema.TestHelpers.schemaOf
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
 import org.scalatest.{FreeSpec, Matchers}
 
-class JsonSchemaTest extends FreeSpec with Matchers with TestHelpers {
+class JsonSchemaTest extends FreeSpec with Matchers {
   "Simple example" - {
     val schema = SchemaFactory.default.createSchema(classOf[TestClass])
     val expectedClassSchema = ClassSchema("fi.oph.scalaschema.TestClass", List(

@@ -3,32 +3,32 @@ package fi.oph.scalaschema
 import fi.oph.scalaschema.annotation.{Discriminator, EnumValue}
 import fi.oph.scalaschema.extraction.{ValidationError, _}
 import org.json4s.JsonAST._
+import org.json4s.jackson.JsonMethods
 import org.scalatest.{FreeSpec, Matchers}
+
 import scala.reflect.runtime.{universe => ru}
 
-class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelpers {
+class ValidationAndExtractionTest extends FreeSpec with Matchers {
   "Validation and extraction" - {
     "Simple example" - {
       "Extraction" in {
         val testValue = TestClass("name", List(1, 2, 3))
-        val json = Json.toJValue(testValue)
-        implicit val context = ExtractionContext(SchemaFactory.default)
-        SchemaValidatingExtractor.extract[TestClass](json) should equal(Right(testValue))
+        verifyExtractionRoundTrip[TestClass](testValue)
       }
       "Missing fields validation" in {
-        verifyValidation(JObject(), classOf[TestClass], Left(List(
+        verifyValidation[TestClass](JObject(), Left(List(
           ValidationError("name",JNothing,MissingProperty()),
           ValidationError("stuff",JNothing,MissingProperty())
         )))
       }
       "Unexpected fields validation" in {
-        verifyValidation(Map(("name" -> "john"), ("stuff" -> List(1)), ("extra" -> "hello")), classOf[TestClass], Left(List(
+        verifyValidation[TestClass](JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1)))), ("extra" -> JString("hello"))), Left(List(
           ValidationError("extra",JString("hello"),UnexpectedProperty())
         )))
       }
 
       "Field type validation" in {
-        verifyValidation(Map(("name" -> 10), ("stuff", List("a", "b"))), classOf[TestClass], Left(List(
+        verifyValidation[TestClass](JObject(("name" -> JInt(10)), ("stuff", JArray(List(JString("a"), JString("b"))))), Left(List(
           ValidationError("name",JInt(10),UnexpectedType("string")),
           ValidationError("stuff.0",JString("a"),UnexpectedType("number")),
           ValidationError("stuff.1",JString("b"),UnexpectedType("number"))
@@ -68,13 +68,13 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
     }
     "@DefaultValue annotation" - {
       "Booleans" in {
-        verifyValidation(JObject(), classOf[BooleansWithDefault], Right(BooleansWithDefault(true)))
+        verifyValidation[BooleansWithDefault](JObject(), Right(BooleansWithDefault(true)))
       }
       "Strings" in {
-        verifyValidation(JObject(), classOf[NumbersWithDefault], Right(NumbersWithDefault(1)))
+        verifyValidation[NumbersWithDefault](JObject(), Right(NumbersWithDefault(1)))
       }
       "Numbers" in {
-        verifyValidation(JObject(), classOf[StringsWithDefault], Right(StringsWithDefault("hello")))
+        verifyValidation[StringsWithDefault](JObject(), Right(StringsWithDefault("hello")))
       }
     }
     "@EnumValue annotation" - {
@@ -83,15 +83,15 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
         verifyExtractionRoundTrip(WithEnumValue("a", None, List()))
       }
       "incorrect enum for string" in {
-        verifyValidation(Map("a" -> "b", "c" -> List()), classOf[WithEnumValue], Left(List(ValidationError("a", JString("b"), EnumValueMismatch(List("a"))))))
-        verifyValidation(Map("a" -> "a", "c" -> List("b")), classOf[WithEnumValue], Left(List(ValidationError("c.0", JString("b"), EnumValueMismatch(List("c"))))))
+        verifyValidation[WithEnumValue](JObject("a" -> JString("b"), "c" -> JArray(Nil)), Left(List(ValidationError("a", JString("b"), EnumValueMismatch(List("a"))))))
+        verifyValidation[WithEnumValue](JObject("a" -> JString("a"), "c" -> JArray(List(JString("b")))), Left(List(ValidationError("c.0", JString("b"), EnumValueMismatch(List("c"))))))
       }
     }
     "Synthetic properties" - {
       "Are ignored" in {
         verifyExtractionRoundTrip(WithSyntheticProperties())
-        verifyValidation(JObject(), classOf[WithSyntheticProperties], Right(WithSyntheticProperties()))
-        verifyValidation(JObject(("field" -> JBool(true))), classOf[WithSyntheticProperties], Right(WithSyntheticProperties()))
+        verifyValidation[WithSyntheticProperties](JObject(), Right(WithSyntheticProperties()))
+        verifyValidation[WithSyntheticProperties](JObject(("field" -> JBool(true))), Right(WithSyntheticProperties()))
       }
     }
     "Traits" - {
@@ -125,16 +125,15 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers with TestHelper
     }
   }
 
-  private def verifyValidation(input: AnyRef, klass: Class[_], expectedResult: Either[List[ValidationError], AnyRef]) = {
+  private def verifyValidation[T: ru.TypeTag](input: JValue, expectedResult: Either[List[ValidationError], AnyRef]) = {
     implicit val context = ExtractionContext(SchemaFactory.default)
-    val json = Json.toJValue(input)
-    SchemaValidatingExtractor.extract(json, klass) should equal(expectedResult)
+    SchemaValidatingExtractor.extract[T](input) should equal(expectedResult)
   }
 
   private def verifyExtractionRoundTrip[T](input: T)(implicit tag: ru.TypeTag[T]): T = {
     implicit val context = ExtractionContext(SchemaFactory.default)
-    val json = Json.toJValue(input)
-    val result = SchemaValidatingExtractor.extract[T](json)
+    val json = Serializer.serialize(input, SerializationContext(SchemaFactory.default))
+    val result = SchemaValidatingExtractor.extract[T](JsonMethods.compact(json))
     result should equal(Right(input))
     result.right.get
   }

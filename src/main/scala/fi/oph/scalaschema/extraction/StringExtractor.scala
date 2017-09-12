@@ -14,7 +14,7 @@ object StringExtractor extends ExtractorWithDefaultValueSupport[String, StringSc
           val errors = context.ifValidating((schema.metadata ++ metadata).collect {
             case RegularExpression(r) if !stringValue.matches(r) => ValidationError(context.path, json, RegExMismatch(r))
           }) ++ {
-            EnumValues.verifyEnumValue(schema.enumValues, stringValue).left.getOrElse(Nil)
+            EnumValues.verifyEnumValue(schema.enumValues, stringValue, json).left.getOrElse(Nil)
           }
           errors match {
             case Nil => Right(stringValue)
