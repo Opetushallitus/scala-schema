@@ -42,9 +42,9 @@ sealed trait SimpleSchema extends ElementSchema {
   override def getSchema(className: String): Option[SchemaWithClassName] = None
 }
 case class DateSchema(dateType: Class[_]) extends SimpleSchema
-case class StringSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema
-case class BooleanSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema
-case class NumberSchema(numberType: Class[_], enumValues: Option[List[Any]] = None) extends SimpleSchema
+case class StringSchema(enumValues: Option[List[String]] = None) extends SimpleSchema
+case class BooleanSchema(enumValues: Option[List[Boolean]] = None) extends SimpleSchema
+case class NumberSchema(numberType: Class[_], enumValues: Option[List[Number]] = None) extends SimpleSchema
 case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false)
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
 
@@ -136,10 +136,7 @@ sealed trait SchemaWithClassName extends Schema {
   } else {
     None
   }
-
-  /*
-    Replace ClassRefSchema with ClassSchema
-   */
+  
   def resolve(factory: SchemaFactory): SchemaWithClassName = this
 
   private def simpleClassName = {
@@ -161,18 +158,18 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
     case _ => None
   }.headOption.getOrElse(key.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize)
 
-  private def addEnumValues(enumValues: Option[List[Any]], newEnumValues: List[Any]):Option[scala.List[Any]] = {
+  private def addEnumValues[T](enumValues: Option[List[T]], newEnumValues: List[Any]):Option[scala.List[T]] = {
     (enumValues.toList.flatten ++ newEnumValues).distinct match {
       case Nil => None
-      case values => Some(values)
+      case values => Some(values.asInstanceOf[List[T]])
     }
   }
 
   private def applyEnumValues(schema: Schema, newEnumValues: List[Any]): Schema = (schema, newEnumValues) match {
     case (_, Nil) => schema
-    case (x: StringSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
-    case (x: BooleanSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
-    case (x: NumberSchema, _) => x.copy(enumValues = addEnumValues(x.enumValues, newEnumValues))
+    case (x: StringSchema, _) => x.copy(enumValues = addEnumValues[String](x.enumValues, newEnumValues))
+    case (x: BooleanSchema, _) => x.copy(enumValues = addEnumValues[Boolean](x.enumValues, newEnumValues))
+    case (x: NumberSchema, _) => x.copy(enumValues = addEnumValues[Number](x.enumValues, newEnumValues))
     case (x: OptionalSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
     case (x: ListSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
     case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
