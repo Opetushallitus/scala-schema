@@ -1,7 +1,7 @@
 package fi.oph.scalaschema.extraction
 
 import fi.oph.scalaschema.annotation.{MaxValue, MaxValueExclusive, MinValue, MinValueExclusive}
-import fi.oph.scalaschema.{ExtractionContext, Metadata, NumberSchema}
+import fi.oph.scalaschema.{ExtractionContext, Metadata, NumberSchema, Serializer}
 import org.json4s.JsonAST.{JDecimal, JDouble, JInt, JLong}
 import org.json4s._
 
@@ -23,7 +23,7 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
         case MinValueExclusive(minValue) if number.doubleValue <= minValue => ValidationError(context.path, json, SmallerThanOrEqualToExclusiveMinimumValue(minValue))
         case MaxValueExclusive(maxValue) if number.doubleValue >= maxValue => ValidationError(context.path, json, GreaterThanOrEqualToExclusiveMaximumValue(maxValue))
       })) ++ {
-        EnumValues.verifyEnumValue(schema.enumValues, number, json).left.getOrElse(Nil)
+        EnumValues.verifyEnumValue[Number](schema.enumValues, number, Serializer.serializeNumber).left.getOrElse(Nil)
       } match {
         case Nil => Right(number)
         case errors => Left(errors)

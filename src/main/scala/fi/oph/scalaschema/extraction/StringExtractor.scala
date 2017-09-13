@@ -1,7 +1,7 @@
 package fi.oph.scalaschema.extraction
 
 import fi.oph.scalaschema.annotation.RegularExpression
-import fi.oph.scalaschema.{ExtractionContext, Metadata, StringSchema}
+import fi.oph.scalaschema.{ExtractionContext, Metadata, Serializer, StringSchema}
 import org.json4s.JsonAST.JString
 import org.json4s._
 
@@ -14,7 +14,7 @@ object StringExtractor extends ExtractorWithDefaultValueSupport[String, StringSc
           val errors = context.ifValidating((schema.metadata ++ metadata).collect {
             case RegularExpression(r) if !stringValue.matches(r) => ValidationError(context.path, json, RegExMismatch(r))
           }) ++ {
-            EnumValues.verifyEnumValue(schema.enumValues, stringValue, json).left.getOrElse(Nil)
+            EnumValues.verifyEnumValue[String](schema.enumValues, stringValue, Serializer.serializeString).left.getOrElse(Nil)
           }
           errors match {
             case Nil => Right(stringValue)

@@ -11,7 +11,7 @@ case class UnexpectedType(expectedType: String, errorType: String = "unexpectedT
 case class DateFormatMismatch(expectedFormat: String = "yyyy-MM-dd", errorType: String = "dateFormatMismatch") extends ValidationRuleViolation
 case class EmptyString(errorType: String = "emptyString") extends ValidationRuleViolation
 case class RegExMismatch(regex: String, errorType: String = "regularExpressionMismatch") extends ValidationRuleViolation
-case class EnumValueMismatch(allowedValues: List[Any], errorType: String = "enumValueMismatch") extends ValidationRuleViolation
+case class EnumValueMismatch(allowedValues: List[JValue], errorType: String = "enumValueMismatch") extends ValidationRuleViolation
 case class NotAnyOf(allowedAlternatives: List[(String, List[String])], errorType: String = "notAnyOf") extends ValidationRuleViolation
 case class SmallerThanMinimumValue(minimumValue: Number, errorType: String = "smallerThanMinimumValue") extends ValidationRuleViolation
 case class GreaterThanMaximumValue(maximumValue: Number, errorType: String = "greaterThanMaximumValue") extends ValidationRuleViolation

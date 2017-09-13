@@ -98,8 +98,8 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         verifyExtractionRoundTrip(WithEnumValue("a", None, List()))
       }
       "incorrect enum for string" in {
-        verifyValidation[WithEnumValue](JObject("a" -> JString("b"), "c" -> JArray(Nil)), Left(List(ValidationError("a", JString("b"), EnumValueMismatch(List("a"))))))
-        verifyValidation[WithEnumValue](JObject("a" -> JString("a"), "c" -> JArray(List(JString("b")))), Left(List(ValidationError("c.0", JString("b"), EnumValueMismatch(List("c"))))))
+        verifyValidation[WithEnumValue](JObject("a" -> JString("b"), "c" -> JArray(Nil)), Left(List(ValidationError("a", JString("b"), EnumValueMismatch(List(JString("a")))))))
+        verifyValidation[WithEnumValue](JObject("a" -> JString("a"), "c" -> JArray(List(JString("b")))), Left(List(ValidationError("c.0", JString("b"), EnumValueMismatch(List(JString("c")))))))
       }
     }
     "Synthetic properties" - {

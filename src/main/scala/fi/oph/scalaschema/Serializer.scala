@@ -35,10 +35,10 @@ object Serializer {
         }
       case s: OptionalSchema => serializeOption(s, x)
       case s: ListSchema => serializeList(s, x)
-      case s: StringSchema => serializeString(s, x)
-      case s: NumberSchema => serializeNumber(s, x)
+      case s: StringSchema => serializeString(x)
+      case s: NumberSchema => serializeNumber(x)
       case s: DateSchema => serializeDate(s, x)
-      case s: BooleanSchema => serializeBoolean(s, x)
+      case s: BooleanSchema => serializeBoolean(x)
       case s: AnySchema => serializeAny(s, x)
     }
   }
@@ -64,12 +64,12 @@ object Serializer {
     }
   })
 
-  private def serializeString(s: StringSchema, x: Any): JValue = x match {
+  def serializeString(x: Any): JValue = x match {
     case x: String => JString(x)
     case _ => throw new RuntimeException("Not a String: " + x)
   }
 
-  private def serializeNumber(s: NumberSchema, x: Any): JValue = x match {
+  def serializeNumber(x: Any): JValue = x match {
     case x: Number => Extraction.decompose(x)
     case _ => throw new RuntimeException("Not a Number: " + x)
   }
@@ -82,7 +82,7 @@ object Serializer {
     case _ => throw new RuntimeException("Not a date: " + x)
   }
 
-  private def serializeBoolean(s: BooleanSchema, x: Any): JValue = x match {
+  def serializeBoolean(x: Any): JValue = x match {
     case x: Boolean => JBool(x)
     case _ => throw new RuntimeException("Not a Boolean: " + x)
   }
