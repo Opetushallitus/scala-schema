@@ -227,7 +227,11 @@ private object TraitImplementationFinder {
 
     cache.getOrElseUpdate(className, {
       val javaClass: Class[_] = Class.forName(className)
-      val reflections = reflectionsCache.getOrElseUpdate(javaClass.getPackage.getName, new Reflections(javaClass.getPackage.getName))
+      val packageName = javaClass.getPackage.getName
+      if (packageName.startsWith("java.")) {
+        throw new RuntimeException("Cannot use java.* interfaces as traits in Schemas")
+      }
+      val reflections = reflectionsCache.getOrElseUpdate(packageName, new Reflections(packageName))
 
       val implementationClasses = reflections.getSubTypesOf(javaClass).asScala.toSet.asInstanceOf[Set[Class[_]]].filter(!_.isInterface)
       implementationClasses.toList.sortBy(_.getName)

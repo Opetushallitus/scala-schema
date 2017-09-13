@@ -25,7 +25,7 @@ object AnyOfExtractor {
     matchingSchemas match {
       case Nil =>
         val allowedAlternatives: List[(String, List[String])] = mapping.map { case (schema, criteria) => (schema.simpleName, criteria.apply(json)) }
-        Left(List(ValidationError(context.path, json, NotAnyOf(allowedAlternatives))))
+        Left(List(ValidationError(context.path, json, NotAnyOf(allowedAlternatives.toMap))))
       case _ =>
         val maxWeight = matchingSchemas.head._2.weight
         val schemasWithMaximumNumberOfMatchingCriteria = matchingSchemas.filter { case (_, criteria) => criteria.weight == maxWeight }
@@ -102,7 +102,7 @@ object AnyOfExtractor {
 
   case class CriteriaCollection(criteria: List[DiscriminatorCriterion]) {
     lazy val weight = criteria.map(_.weight).sum
-    def apply(json: JValue)(implicit context: ExtractionContext, rootSchema: Schema) = criteria.flatMap(c => c.apply(json))
+    def apply(json: JValue)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = criteria.flatMap(c => c.apply(json))
     def matches(json: JValue)(implicit context: ExtractionContext, rootSchema: Schema) = apply(json).isEmpty
   }
 

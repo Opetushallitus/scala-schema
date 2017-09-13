@@ -138,6 +138,13 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         }
       }
     }
+    "Validation errors" - {
+      "are serializable" in {
+        // Verify this by constructing a Schema for ValidationError
+        val schema = JsonMethods.pretty(SchemaToJson.toJsonSchema(SchemaFactory.default.createSchema[ValidationError]))
+        //println(schema)
+      }
+    }
   }
 
   private def verifyValidation[T: ru.TypeTag](input: JValue, expectedResult: Either[List[ValidationError], AnyRef]) = {
