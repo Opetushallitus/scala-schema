@@ -1,7 +1,7 @@
 package fi.oph.scalaschema
 
 import java.sql.Timestamp
-import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
+import java.time.{LocalDate, ZonedDateTime}
 import java.util.Date
 
 import org.joda.time.format.ISODateTimeFormat
@@ -39,6 +39,10 @@ class SerializationSpec extends FreeSpec with Matchers {
 
   "lists" in {
     testSerialization(Lists(List(1)), """{"things":[1]}""")
+  }
+
+  "maps" in {
+    testSerialization(Maps(Map("a" -> 1)), """{"things":{"a":1}}""")
   }
 
   "options" in {

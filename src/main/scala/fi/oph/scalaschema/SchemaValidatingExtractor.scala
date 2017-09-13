@@ -31,6 +31,7 @@ object SchemaValidatingExtractor {
       case as: AnySchema => Right(json)
       case _ => extractRequired(json, metadata) { schema match {
         case ls: ListSchema => ListExtractor.extractList(json, ls, metadata)
+        case ms: MapSchema => MapExtractor.extractMap(json, ms, metadata)
         case ds: DateSchema => DateExtractor.extractDate(json, ds, metadata)
         case cs: SchemaWithClassName =>
           json match {

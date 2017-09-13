@@ -56,13 +56,18 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     val typeName = tpe.typeSymbol.fullName
 
     if (typeName == "scala.Some") {
-      createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, state)
+      createSchema(typeArgs(tpe).head, state)
     } else if (typeName == "scala.Option") {
       // Option[T] becomes the schema of T with required set to false
-      OptionalSchema(createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, state))
+      OptionalSchema(createSchema(typeArgs(tpe).head, state))
+    } else if (isMapType(tpe)) {
+      if(typeArgs(tpe).head.typeSymbol.fullName != "java.lang.String") {
+        throw new IllegalArgumentException("Maps are only supported with String keys")
+      }
+      MapSchema(createSchema(typeArgs(tpe)(1), state))
     } else if (isListType(tpe)) {
       // (Traversable)[T] becomes a schema with items set to the schema of T
-      ListSchema(createSchema(tpe.asInstanceOf[ru.TypeRefApi].args.head, state))
+      ListSchema(createSchema(typeArgs(tpe).head, state))
     } else {
       schemaTypeForScala.getOrElse(typeName, {
         if (tpe.typeSymbol.isClass) {
@@ -73,6 +78,8 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       })
     }
   }
+
+  private def typeArgs(tpe: ru.Type) = tpe.asInstanceOf[ru.TypeRefApi].args
 
   private lazy val schemaTypeForScala = Map(
     "org.joda.time.DateTime" -> DateSchema(dateType = classOf[DateTime]),
@@ -194,6 +201,10 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
       s.fullName == "scala.Seq" ||
       s.fullName == "scala.List" ||
       s.fullName == "scala.Vector")
+  }
+
+  private def isMapType(tpe: ru.Type): Boolean = {
+    tpe.baseClasses.exists(s => s.fullName == "scala.collection.immutable.Map")
   }
 
   private def findImplementations(traitType: ru.Type, state: ScanState): List[SchemaWithClassName] = {

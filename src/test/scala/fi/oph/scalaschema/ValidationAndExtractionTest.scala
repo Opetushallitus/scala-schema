@@ -81,6 +81,9 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
     "JValue fields" in {
       verifyExtractionRoundTrip(WithJValue(JString("boo")))
     }
+    "Maps" in {
+      verifyExtractionRoundTrip(Maps(Map("x" -> 1)))
+    }
     "@DefaultValue annotation" - {
       "Booleans" in {
         verifyValidation[BooleansWithDefault](JObject(), Right(BooleansWithDefault(true)))
@@ -143,6 +146,10 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         // Verify this by constructing a Schema for ValidationError
         val schema = JsonMethods.pretty(SchemaToJson.toJsonSchema(SchemaFactory.default.createSchema[ValidationError]))
         //println(schema)
+      }
+
+      "case NotAnyOf" in {
+        verifyExtractionRoundTrip(NotAnyOf(Map("foo" -> List("a", "b"))))
       }
     }
   }

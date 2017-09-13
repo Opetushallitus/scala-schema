@@ -58,6 +58,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
     "Lists" in {
       jsonSchemaPropertiesOf(classOf[Lists]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
     }
+    "Maps" in {
+      jsonSchemaPropertiesOf(classOf[Maps]) should equal("""{"things":{"type":"object","patternProperties":{".*":{"type":"number"}}}}""")
+    }
     "Objects (uses definitions)" in {
       jsonSchemaOf(classOf[Objects]) should equal("""{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"],"definitions":{"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
     }

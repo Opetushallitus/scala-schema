@@ -21,6 +21,7 @@ case class Dates(a: LocalDate, b: ZonedDateTime, c: Date, d: Timestamp, e: DateT
 case class Lists(things: List[Int])
 case class Objects(x: Strings)
 case class NestedDefinitions(x: Objects)
+case class Maps(things: Map[String, Int])
 
 @Description("Boom boom boom")
 case class WithDescription()

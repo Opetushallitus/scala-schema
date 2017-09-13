@@ -33,6 +33,17 @@ case class ListSchema(itemSchema: Schema) extends Schema {
   override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
 }
 
+// for Map[String, _]
+case class MapSchema(itemSchema: Schema) extends Schema {
+  override def metadata: List[Metadata] = itemSchema.metadata
+  def mapItems(f: ElementSchema => ElementSchema) = MapSchema(itemSchema.mapItems(f))
+  def collectDefinitions = {
+    val (itemSchema, defs) = this.itemSchema.collectDefinitions
+    (MapSchema(itemSchema), defs)
+  }
+  override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
+}
+
 // Marker trait for schemas of actual elements (not optional/list wrappers)
 sealed trait ElementSchema extends Schema {
   def mapItems(f: ElementSchema => ElementSchema): Schema = f(this)

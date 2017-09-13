@@ -35,6 +35,7 @@ object Serializer {
         }
       case s: OptionalSchema => serializeOption(s, x)
       case s: ListSchema => serializeList(s, x)
+      case s: MapSchema => serializeMap(s, x)
       case s: StringSchema => serializeString(x)
       case s: NumberSchema => serializeNumber(x)
       case s: DateSchema => serializeDate(s, x)
@@ -51,6 +52,11 @@ object Serializer {
 
   private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
     case xs: List[_] => JArray(xs.map { x => serializeWithSchema(x, s.itemSchema)})
+    case _ => throw new RuntimeException("Not a List: " + x)
+  }
+
+  private def serializeMap(s: MapSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
+    case xs: Map[String, _] => JObject(xs.toList.map { case (key, value) => JField(key, serializeWithSchema(value, s.itemSchema))})
     case _ => throw new RuntimeException("Not a List: " + x)
   }
 
