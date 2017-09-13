@@ -19,7 +19,7 @@ object SchemaToJson {
   }
 
   private def toJsonSchemaWithoutMetadata(t: Schema): JObject = t match {
-    case DateSchema(_, enumValues) => JObject(List("type" -> JString("string"), "format" -> JString("date")) ++ toEnumValueProperty(enumValues))
+    case DateSchema(_) => JObject(List("type" -> JString("string"), "format" -> JString("date")))
     case StringSchema(enumValues) => withMinLength(simpleObjectToJson("string", enumValues), Some(1))
     case BooleanSchema(enumValues) => simpleObjectToJson("boolean", enumValues)
     case NumberSchema(_, enumValues) => simpleObjectToJson("number", enumValues)

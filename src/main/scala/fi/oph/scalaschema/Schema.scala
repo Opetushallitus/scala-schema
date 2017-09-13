@@ -41,7 +41,7 @@ sealed trait ElementSchema extends Schema {
 sealed trait SimpleSchema extends ElementSchema {
   override def getSchema(className: String): Option[SchemaWithClassName] = None
 }
-case class DateSchema(dateType: Class[_], enumValues: Option[List[Any]] = None) extends SimpleSchema // Why untyped lists?
+case class DateSchema(dateType: Class[_]) extends SimpleSchema
 case class StringSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema
 case class BooleanSchema(enumValues: Option[List[Any]] = None) extends SimpleSchema
 case class NumberSchema(numberType: Class[_], enumValues: Option[List[Any]] = None) extends SimpleSchema

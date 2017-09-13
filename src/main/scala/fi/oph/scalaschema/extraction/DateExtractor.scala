@@ -15,7 +15,7 @@ object DateExtractor {
   def extractDate(json: JValue, schema: DateSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] =
     json match {
       case JString(dateString) => try {
-        EnumValues.verifyEnumValue(schema.enumValues, parse(dateString, schema.dateType), json)
+        Right(parse(dateString, schema.dateType))
       } catch {
         case e: DateTimeParseException => Left(List(ValidationError(context.path, json, DateFormatMismatch())))
       }

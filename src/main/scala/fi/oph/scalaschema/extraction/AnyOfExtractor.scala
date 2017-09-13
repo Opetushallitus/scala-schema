@@ -64,7 +64,6 @@ object AnyOfExtractor {
       case s: StringSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: NumberSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: BooleanSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
-      case s: DateSchema if s.enumValues.isDefined =>    List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: ClassRefSchema => propertyMatchers(keyPath, property.copy(schema = SchemaResolver.resolveSchema(s)))
       case s: ClassSchema =>
         List(PropertyExists(propertyPath)) ++ s.properties.flatMap { nestedProperty =>
