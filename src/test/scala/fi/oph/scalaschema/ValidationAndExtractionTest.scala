@@ -109,7 +109,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       "Are ignored" in {
         verifyExtractionRoundTrip(WithSyntheticProperties())
         verifyValidation[WithSyntheticProperties](JObject(), Right(WithSyntheticProperties()))
-        verifyValidation[WithSyntheticProperties](JObject(("field" -> JBool(true))), Right(WithSyntheticProperties()))
+        verifyValidation[WithSyntheticProperties](JObject(List("field2" -> JArray(List(JBool(true))), "field1" -> JBool(true))), Right(WithSyntheticProperties()))
       }
     }
     "Traits" - {

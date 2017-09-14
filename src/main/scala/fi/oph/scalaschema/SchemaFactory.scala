@@ -10,6 +10,7 @@ import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.joda.time.DateTime
+import org.json4s.scalap.scalasig.NullaryMethodType
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
@@ -79,7 +80,10 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     }
   }
 
-  private def typeArgs(tpe: ru.Type) = tpe.asInstanceOf[ru.TypeRefApi].args
+  private def typeArgs(tpe: ru.Type): List[ru.Type] = tpe match {
+    case t: ru.TypeRefApi => t.args
+    case t: ru.NullaryMethodTypeApi => typeArgs(t.resultType)
+  }
 
   private lazy val schemaTypeForScala = Map(
     "org.joda.time.DateTime" -> DateSchema(dateType = classOf[DateTime]),

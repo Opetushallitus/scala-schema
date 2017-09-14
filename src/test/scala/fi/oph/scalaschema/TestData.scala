@@ -46,7 +46,9 @@ case class WithMaxMinValueExclusive(@MinValueExclusive(1) @MaxValueExclusive(2) 
 case class WithRegEx(@RegularExpression("^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$") date: String)
 case class WithSyntheticProperties() {
   @SyntheticProperty
-  def field: Boolean = true
+  def field1: Boolean = true
+  @SyntheticProperty
+  def field2: List[Boolean] = List(true)
 }
 
 case class WithTraitWithSyntheticProperties() extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties

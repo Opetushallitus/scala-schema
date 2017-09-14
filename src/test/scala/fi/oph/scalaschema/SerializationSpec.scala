@@ -51,7 +51,7 @@ class SerializationSpec extends FreeSpec with Matchers {
   }
 
   "synthetic properties" in {
-    testSerialization(WithSyntheticProperties(), """{"field":true}""")
+    testSerialization(WithSyntheticProperties(), """{"field2":[true],"field1":true}""")
   }
 
   "overridden synthetic properties" in {
