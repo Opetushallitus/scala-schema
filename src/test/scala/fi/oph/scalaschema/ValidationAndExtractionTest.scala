@@ -33,6 +33,9 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
             ValidationError("extra",JString("hello"),UnexpectedProperty())
           )))
         }
+        "Are ignored if value is null" in {
+          verifyValidation[TestClass](JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1)))), ("extra" -> JNull)), Right(TestClass("john", List(1))), ExtractionContext(SchemaFactory.default))
+        }
         "Are ignored in loose mode" in {
           verifyValidation[TestClass](inputWithExtraField, Right(TestClass("john", List(1))), ExtractionContext(SchemaFactory.default, ignoreUnexpectedProperties = true))
         }
@@ -96,6 +99,14 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       }
       "When validation of nested data fails" in {
         verifyValidation[Map[String, String]](JObject(JField("first", JInt(1))), Left(List(ValidationError("first", JInt(1), UnexpectedType("string")))))
+      }
+    }
+    "Optionals" - {
+      "Missing field translates to None" in {
+        verifyValidation[OptionalFields](JObject(), Right(OptionalFields(None)))
+      }
+      "Null value translates to None" in {
+        verifyValidation[OptionalFields](JObject("field" -> JNull), Right(OptionalFields(None)))
       }
     }
     "@DefaultValue annotation" - {
