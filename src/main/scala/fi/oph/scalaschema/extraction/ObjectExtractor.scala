@@ -15,7 +15,7 @@ object ObjectExtractor {
             val jsonValue = json \ property.key
             SchemaValidatingExtractor.extract(jsonValue, property.schema, property.metadata)(subContext, rootSchema)
           }
-        val unexpectedProperties = values
+        val unexpectedProperties = if (context.ignoreUnexpectedProperties) Nil else values
           .filterNot(pair => schema.properties.find(_.key == pair._1).isDefined)
           .map(pair => ValidationError(context.subPath(pair._1), pair._2, UnexpectedProperty()))
         val errors: List[ValidationError] = propertyResults.collect { case Left(errors) => errors }.flatten ++ unexpectedProperties

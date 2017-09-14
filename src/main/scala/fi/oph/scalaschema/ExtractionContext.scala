@@ -8,7 +8,11 @@ import fi.oph.scalaschema.extraction.{CustomDeserializer, ValidationError}
   *
   * The context with cache some details for you, so you should retain it for later use. The caching is thread-safe, of course.
   */
-case class ExtractionContext(schemaFactory: SchemaFactory, path: String = "", customDeserializers: List[CustomDeserializer] = Nil, validate: Boolean = true, criteriaCache: collection.mutable.Map[String, CriteriaCollection] = collection.mutable.Map.empty) {
+case class ExtractionContext(schemaFactory: SchemaFactory,
+                             customDeserializers: List[CustomDeserializer] = Nil,
+                             validate: Boolean = true,
+                             ignoreUnexpectedProperties: Boolean = false,
+                             path: String = "", criteriaCache: collection.mutable.Map[String, CriteriaCollection] = collection.mutable.Map.empty) {
   def hasSerializerFor(schema: SchemaWithClassName) = customSerializerFor(schema).isDefined
   def customSerializerFor(schema: SchemaWithClassName) = customDeserializers.find(_.isApplicable(schema))
   def ifValidating(errors: => List[ValidationError]) = if (validate) { errors } else { Nil }

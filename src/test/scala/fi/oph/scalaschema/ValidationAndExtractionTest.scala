@@ -26,12 +26,17 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
           ValidationError("stuff",JNothing,MissingProperty())
         )))
       }
-      "Unexpected fields validation" in {
-        verifyValidation[TestClass](JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1)))), ("extra" -> JString("hello"))), Left(List(
-          ValidationError("extra",JString("hello"),UnexpectedProperty())
-        )))
+      "Unexpected fields" - {
+        val inputWithExtraField = JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1)))), ("extra" -> JString("hello")))
+        "Cause errors in default/strict mode" in {
+          verifyValidation[TestClass](inputWithExtraField, Left(List(
+            ValidationError("extra",JString("hello"),UnexpectedProperty())
+          )))
+        }
+        "Are ignored in loose mode" in {
+          verifyValidation[TestClass](inputWithExtraField, Right(TestClass("john", List(1))), ExtractionContext(SchemaFactory.default, ignoreUnexpectedProperties = true))
+        }
       }
-
       "Field type validation" in {
         verifyValidation[TestClass](JObject(("name" -> JInt(10)), ("stuff", JArray(List(JString("a"), JString("b"))))), Left(List(
           ValidationError("name",JInt(10),UnexpectedType("string")),
@@ -163,8 +168,8 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
     }
   }
 
-  private def verifyValidation[T: ru.TypeTag](input: JValue, expectedResult: Either[List[ValidationError], AnyRef]) = {
-    implicit val context = ExtractionContext(SchemaFactory.default)
+  private def verifyValidation[T: ru.TypeTag](input: JValue, expectedResult: Either[List[ValidationError], AnyRef], context: ExtractionContext = ExtractionContext(SchemaFactory.default)) = {
+    implicit val c = context
     SchemaValidatingExtractor.extract[T](input) should equal(expectedResult)
   }
 
