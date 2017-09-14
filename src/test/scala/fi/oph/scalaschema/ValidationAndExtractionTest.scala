@@ -81,8 +81,17 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
     "JValue fields" in {
       verifyExtractionRoundTrip(WithJValue(JString("boo")))
     }
-    "Maps" in {
-      verifyExtractionRoundTrip(Maps(Map("x" -> 1)))
+    "Maps" - {
+      "Map[String, Int]" in {
+        verifyExtractionRoundTrip(Maps(Map("x" -> 1)))
+      }
+      "Only String supported as key type" in {
+        val msg = intercept[IllegalArgumentException] { SchemaFactory.default.createSchema[Map[Int, String]] }.getMessage
+        msg should equal("Maps are only supported with String keys")
+      }
+      "When validation of nested data fails" in {
+        verifyValidation[Map[String, String]](JObject(JField("first", JInt(1))), Left(List(ValidationError("first", JInt(1), UnexpectedType("string")))))
+      }
     }
     "@DefaultValue annotation" - {
       "Booleans" in {

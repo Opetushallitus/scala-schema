@@ -9,7 +9,7 @@ object MapExtractor {
     case JObject(fields) =>
       val valueResults: List[Either[List[ValidationError], (String, Any)]] = fields.map {
         case JField(key, valueJson) =>
-          SchemaValidatingExtractor.extract(valueJson, ms.itemSchema, metadata).map(fieldValue => (key -> fieldValue))
+          SchemaValidatingExtractor.extract(valueJson, ms.itemSchema, metadata)(context.subContext(key), rootSchema).map(fieldValue => (key -> fieldValue))
       }
 
       val errors: List[ValidationError] = valueResults.collect { case Left(errors) => errors }.flatten
