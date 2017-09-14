@@ -6,7 +6,7 @@ Generate a [JSON schema](http://json-schema.org/) from Scala classes
 - Export the schema as JSON
 - Use the schema object directly for efficient [JSON Validation and extraction into Scala objects](#validation-and-extraction), with machine and human-friendly validation error messages.
 - [Serialize Scala objects](#serialization) into JSON. Do this way faster than with json4s serialization mechanism.
-- Supports case classes, lists, strings, dates, numbers, booleans
+- Supports case classes, lists, strings, dates, numbers, booleans and maps (when keys are strings)
 - Supports polymorphism via traits: finds trait implementations in same package
 - Customize schema with annotations (like min/max size, description)
 
