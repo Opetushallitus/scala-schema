@@ -22,6 +22,12 @@ object Serializer {
     serializeWithSchema(obj, rootSchema)
   }
 
+  def serialize(obj: Any, klass: Class[_], context: SerializationContext): JValue = {
+    implicit val rootSchema = context.schemaFactory.createSchema(klass)
+    implicit val ctx = context
+    serializeWithSchema(obj, rootSchema)
+  }
+
   private def serializeWithSchema(x: Any, schema: Schema)(implicit context: SerializationContext, rootSchema: Schema): JValue = {
     schema match {
       case s: ClassSchema => serializeObject(s, x)
