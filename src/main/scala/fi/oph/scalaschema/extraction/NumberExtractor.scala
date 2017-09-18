@@ -13,6 +13,11 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
       case JInt(num: BigInt) => Right(num)
       case JDecimal(num: BigDecimal) => Right(num)
       case JLong(num) => Right(num.toLong)
+      case JString(num) =>  try {
+          Right(parseNumber(num, schema.numberType))
+        } catch {
+          case e: NumberFormatException => Left(List(ValidationError(context.path, json, UnexpectedType("number"))))
+        }
       case _ =>
         Left(List(ValidationError(context.path, json, UnexpectedType("number"))))
     }
@@ -28,6 +33,26 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
         case Nil => Right(number)
         case errors => Left(errors)
       }
+    }
+  }
+
+  private def parseNumber(str: String, klass: Class[_]): Number = {
+    if (klass == classOf[Int] || klass == classOf[Integer]) {
+      str.toInt
+    } else if (klass == classOf[Float]) {
+      str.toFloat
+    } else if (klass == classOf[Double]) {
+      str.toDouble
+    } else if (klass == classOf[Int]) {
+      str.toInt
+    } else if (klass == classOf[Long]) {
+      str.toLong
+    } else if (klass == classOf[BigInt]) {
+      BigInt(str)
+    } else if (klass == classOf[BigDecimal]) {
+      BigDecimal(str)
+    } else {
+      throw new UnsupportedOperationException("Unrecognized Number type: " + klass.getName)
     }
   }
 

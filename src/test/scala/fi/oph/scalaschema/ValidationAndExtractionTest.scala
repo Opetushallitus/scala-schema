@@ -85,6 +85,18 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         val bi: BigInt = result.bi.get
         val bd: BigDecimal = result.bd.get
       }
+      "Parsing from String value" - {
+        "Valid value" in {
+          verifyValidation[Numbers](JObject("a" -> JString("1"), "b" -> JString("1"), "c" -> JString("1"), "d" -> JString("1")), Right(Numbers(1, 1, 1, 1)))
+        }
+        "Invalid value" in {
+          verifyValidation[Numbers](JObject("a" -> JString("LOL"), "b" -> JString("1"), "c" -> JString("1"), "d" -> JString("1")), Left(List(ValidationError("a", JString("LOL"), UnexpectedType("number")))))
+        }
+        "BigInt, BigDecimal" in {
+          verifyValidation[BigNumbers](JObject("bi" -> JString("1234567890123456789012345678901234567890"), "bd" -> JString("1234567890123456789012345678901234567890.1234567890")),
+            Right(BigNumbers(BigInt("1234567890123456789012345678901234567890"), BigDecimal("1234567890123456789012345678901234567890.1234567890"))))
+        }
+      }
     }
     "JValue fields" in {
       verifyExtractionRoundTrip(WithJValue(JString("boo")))
@@ -229,5 +241,6 @@ case class SomethingElse(
 
 
 case class MoreNumbers(i: Int, f: Float, l: Long, d: Double, bd : BigDecimal, bi: BigInt)
+case class BigNumbers(bi: BigInt, bd : BigDecimal)
 case class MoreNumbersInLists(i: List[Int], f: List[Float], l: List[Long], d: List[Double], bd : List[BigDecimal], bi: List[BigInt])
 case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d: Option[Double], bd : Option[BigDecimal], bi: Option[BigInt])
