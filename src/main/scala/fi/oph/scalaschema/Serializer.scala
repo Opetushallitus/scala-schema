@@ -17,13 +17,11 @@ object Serializer {
   implicit val format: Formats = new DefaultFormats() {}
 
   def serialize[T : ru.TypeTag](obj: T, context: SerializationContext): JValue = {
-    implicit val rootSchema = context.schemaFactory.createSchema[T]
-    implicit val ctx = context
-    serializeWithSchema(obj, rootSchema)
+    serialize(obj, context.schemaFactory.createSchema[T], context)
   }
 
-  def serialize(obj: Any, klass: Class[_], context: SerializationContext): JValue = {
-    implicit val rootSchema = context.schemaFactory.createSchema(klass)
+  def serialize(obj: Any, schema: Schema, context: SerializationContext): JValue = {
+    implicit val rootSchema = schema
     implicit val ctx = context
     serializeWithSchema(obj, rootSchema)
   }

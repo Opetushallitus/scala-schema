@@ -36,6 +36,10 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     createSchema(clazz.getName)
   }
 
+  def createSchema(tpe: ru.Type): Schema = {
+    getCachedSchema(tpe)
+  }
+
   def createSchema[T](implicit tag: ru.TypeTag[T]): Schema = {
     getCachedSchema(tag.tpe)
   }
