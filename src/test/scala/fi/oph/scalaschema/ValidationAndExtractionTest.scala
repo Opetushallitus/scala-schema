@@ -41,11 +41,22 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         }
       }
       "Field type validation" in {
-        verifyValidation[TestClass](JObject(("name" -> JInt(10)), ("stuff", JArray(List(JString("a"), JString("b"))))), Left(List(
-          ValidationError("name",JInt(10),UnexpectedType("string")),
+        verifyValidation[TestClass](JObject(("name" -> JObject()), ("stuff", JArray(List(JString("a"), JString("b"))))), Left(List(
+          ValidationError("name",JObject(),UnexpectedType("string")),
           ValidationError("stuff.0",JString("a"),UnexpectedType("number")),
           ValidationError("stuff.1",JString("b"),UnexpectedType("number"))
         )))
+      }
+    }
+    "Strings" - {
+      "Extracts string" in {
+        verifyValidation[String](JString("1"), Right("1"))
+      }
+      "Accepts numeric input" in {
+        verifyValidation[String](JInt(1), Right("1"))
+      }
+      "Accepts boolean input" in {
+        verifyValidation[String](JBool(true), Right("true"))
       }
     }
     "Dates" in {
@@ -110,7 +121,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         msg should equal("Maps are only supported with String keys")
       }
       "When validation of nested data fails" in {
-        verifyValidation[Map[String, String]](JObject(JField("first", JInt(1))), Left(List(ValidationError("first", JInt(1), UnexpectedType("string")))))
+        verifyValidation[Map[String, Int]](JObject(JField("first", JString("lol"))), Left(List(ValidationError("first", JString("lol"), UnexpectedType("number")))))
       }
     }
     "Optionals" - {

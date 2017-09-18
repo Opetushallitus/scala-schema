@@ -202,3 +202,8 @@ Add Jitpack.io resolver:
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
     libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.9.0_2.12"
+
+### TODO
+
+- Support case classes with type parameters
+- Improve error messages of SchemaFactory: include path in all error messages
