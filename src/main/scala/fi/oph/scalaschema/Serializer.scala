@@ -68,7 +68,11 @@ object Serializer {
     context.propertyProcessor(s, p).flatMap { p =>
       val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
       serializeWithSchema(value, p.schema) match {
-        case JNothing => None
+        case JNothing => if (context.omitEmptyFields) {
+          None
+        } else {
+          Some(JField(p.key, JNull))
+        }
         case jValue => Some(JField(p.key, jValue))
       }
     }
@@ -103,7 +107,7 @@ object Serializer {
   }
 }
 
-case class SerializationContext(schemaFactory: SchemaFactory, propertyProcessor: SchemaPropertyProcessor = (s, p) => List(p))
+case class SerializationContext(schemaFactory: SchemaFactory, propertyProcessor: SchemaPropertyProcessor = (s, p) => List(p), omitEmptyFields: Boolean = true)
 
 object SchemaPropertyProcessor {
   type SchemaPropertyProcessor = (ClassSchema, Property) => List[Property]

@@ -11,7 +11,7 @@ import org.scalatest.{FreeSpec, Matchers}
 import scala.reflect.runtime.{universe => ru}
 
 class SerializationSpec extends FreeSpec with Matchers {
-  "strings" in {
+  "strings" - {
     testSerialization(Strings("a"), """{"s":"a"}""")
   }
   "numbers" in {
@@ -45,9 +45,16 @@ class SerializationSpec extends FreeSpec with Matchers {
     testSerialization(Maps(Map("a" -> 1)), """{"things":{"a":1}}""")
   }
 
-  "options" in {
-    testSerialization(OptionalFields(None), """{}""")
-    testSerialization(OptionalFields(Some(true)), """{"field":true}""")
+  "options" - {
+    "when value exists" in {
+      testSerialization(OptionalFields(Some(true)), """{"field":true}""")
+    }
+    "with default settings, empty options are omitted" in {
+      testSerialization(OptionalFields(None), """{}""")
+    }
+    "alternative settings" in {
+      testSerialization(OptionalFields(None), """{"field":null}""", defaultContext.copy(omitEmptyFields = false))
+    }
   }
 
   "synthetic properties" in {
