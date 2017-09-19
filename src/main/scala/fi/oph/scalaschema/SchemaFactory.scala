@@ -101,6 +101,11 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     "scala.Long" -> NumberSchema(numberType = classOf[Long]),
     "scala.Double" -> NumberSchema(numberType = classOf[Double]),
     "scala.Float" -> NumberSchema(numberType = classOf[Float]),
+    "java.lang.Integer" -> NumberSchema(numberType = classOf[Integer]),
+    "java.lang.Float" -> NumberSchema(numberType = classOf[java.lang.Float]),
+    "java.lang.Long" -> NumberSchema(numberType = classOf[java.lang.Long]),
+    "java.lang.Double" -> NumberSchema(numberType = classOf[java.lang.Double]),
+    "java.math.BigDecimal" -> NumberSchema(numberType = classOf[java.math.BigDecimal]),
     classOf[BigDecimal].getName -> NumberSchema(numberType = classOf[BigDecimal]),
     classOf[BigInt].getName -> NumberSchema(numberType = classOf[BigInt]),
     "org.json4s.JsonAST.JValue" -> AnySchema()

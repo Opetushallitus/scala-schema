@@ -51,6 +51,16 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
       BigInt(str)
     } else if (klass == classOf[BigDecimal]) {
       BigDecimal(str)
+    } else if (klass == classOf[Integer]) {
+      Integer.valueOf(str)
+    } else if (klass == classOf[java.lang.Float]) {
+      java.lang.Float.valueOf(str)
+    } else if (klass == classOf[java.lang.Long]) {
+      java.lang.Long.valueOf(str)
+    } else if (klass == classOf[java.lang.Double]) {
+      java.lang.Double.valueOf(str)
+    } else if (klass == classOf[java.math.BigDecimal]) {
+      new java.math.BigDecimal(str)
     } else {
       throw new UnsupportedOperationException("Unrecognized Number type: " + klass.getName)
     }
@@ -59,17 +69,21 @@ object NumberExtractor extends ExtractorWithDefaultValueSupport[Number, NumberSc
   private def convertNumber(number: Number, klass: Class[_]): Number =  {
     if (klass == classOf[Int] || klass == classOf[Integer]) {
       number.intValue
-    } else if (klass == classOf[Float]) {
+    } else if (klass == classOf[Float] || klass == classOf[java.lang.Float]) {
       number.floatValue
-    } else if (klass == classOf[Double]) {
+    } else if (klass == classOf[Double] || klass == classOf[java.lang.Double]) {
       number.doubleValue
-    } else if (klass == classOf[Int]) {
-      number.intValue
-    } else if (klass == classOf[Long]) {
+    } else if (klass == classOf[Long] || klass == classOf[java.lang.Long]) {
       number.longValue
     } else if (klass == classOf[BigInt]) {
       if (!number.isInstanceOf[BigInt]) {
         BigInt(number.longValue)
+      } else {
+        number
+      }
+    } else if (klass == classOf[java.math.BigDecimal]) {
+      if (!number.isInstanceOf[java.math.BigDecimal]) {
+        new java.math.BigDecimal(number.doubleValue)
       } else {
         number
       }

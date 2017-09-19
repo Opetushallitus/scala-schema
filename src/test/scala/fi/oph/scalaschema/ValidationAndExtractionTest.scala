@@ -1,5 +1,6 @@
 package fi.oph.scalaschema
 
+import java.math.BigDecimal.{valueOf => bigDecimal}
 import java.sql.Timestamp
 import java.time.{LocalDate, ZonedDateTime}
 import java.util.Date
@@ -83,6 +84,9 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       }
       "Including BigDecimal, BigInt" in {
         verifyExtractionRoundTrip(MoreNumbers(1, 1, 1, 1, 1, 1))
+      }
+      "Java numbers" in {
+        verifyExtractionRoundTrip(JavaNumbers(1, 1f, 1l, 1d, bigDecimal(1)))
       }
       "In lists" in {
         val result = verifyExtractionRoundTrip(MoreNumbersInLists(List(1), List(1), List(1), List(1), List(1), List(1)))
@@ -263,6 +267,7 @@ case class SomethingElse(
 
 
 case class MoreNumbers(i: Int, f: Float, l: Long, d: Double, bd : BigDecimal, bi: BigInt)
+case class JavaNumbers(i: Integer, f: java.lang.Float, l: java.lang.Long, d: java.lang.Double, bd : java.math.BigDecimal)
 case class BigNumbers(bi: BigInt, bd : BigDecimal)
 case class MoreNumbersInLists(i: List[Int], f: List[Float], l: List[Long], d: List[Double], bd : List[BigDecimal], bi: List[BigInt])
 case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d: Option[Double], bd : Option[BigDecimal], bi: Option[BigInt])
