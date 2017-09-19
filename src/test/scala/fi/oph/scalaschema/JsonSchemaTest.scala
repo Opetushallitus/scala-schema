@@ -124,7 +124,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       }
       "@SyntheticProperty" - {
         "for method in case class" in {
-          jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field2":{"type":"array","items":{"type":"boolean"}},"field1":{"type":"boolean"}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
+          jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field1":{"type":"boolean"},"field2":{"type":"array","items":{"type":"boolean"}}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
         }
         "for method in trait" in {
           jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")

@@ -226,12 +226,12 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
 }
 
 private object MemberFinder {
-  val cache: collection.mutable.Map[String, ru.MemberScope] = collection.mutable.Map.empty
+  val cache: collection.mutable.Map[String, List[ru.Symbol]] = collection.mutable.Map.empty
 
-  def members(tpe: ru.Type) = this.synchronized {
+  def members(tpe: ru.Type): List[ru.Symbol] = this.synchronized {
     val className: String = tpe.typeSymbol.asClass.fullName
     cache.getOrElseUpdate(className, {
-      tpe.members
+      tpe.decls.sorted
     })
   }
 }
