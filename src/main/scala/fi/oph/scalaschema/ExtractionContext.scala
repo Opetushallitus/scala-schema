@@ -12,6 +12,7 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
                              customDeserializers: List[CustomDeserializer] = Nil,
                              validate: Boolean = true,
                              ignoreUnexpectedProperties: Boolean = false,
+                             allowEmptyStrings: Boolean = true,
                              path: String = "", criteriaCache: collection.mutable.Map[String, CriteriaCollection] = collection.mutable.Map.empty) {
   def hasSerializerFor(schema: SchemaWithClassName) = customSerializerFor(schema).isDefined
   def customSerializerFor(schema: SchemaWithClassName) = customDeserializers.find(_.isApplicable(schema))

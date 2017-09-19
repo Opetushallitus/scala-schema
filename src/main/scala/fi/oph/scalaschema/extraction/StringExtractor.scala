@@ -15,7 +15,7 @@ object StringExtractor extends ExtractorWithDefaultValueSupport[String, StringSc
 
   private def validateString(stringValue: String, json: JValue, schema: StringSchema, metadata: List[Metadata])(implicit context: ExtractionContext) = {
     stringValue match {
-      case "" if context.validate => Left(List(ValidationError(context.path, json, EmptyString())))
+      case "" if !context.allowEmptyStrings => Left(List(ValidationError(context.path, json, EmptyString())))
       case _ =>
         val errors = context.ifValidating((schema.metadata ++ metadata).collect {
           case RegularExpression(r) if !stringValue.matches(r) => ValidationError(context.path, json, RegExMismatch(r))
