@@ -59,12 +59,21 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       "Accepts boolean input" in {
         verifyValidation[String](JBool(true), Right("true"))
       }
-      "Empty strings" - {
-        "Allowed with default settings" in {
+      "Nulls rejected" in {
+        verifyValidation[String](JNull, Left(List(ValidationError("", JNull, UnexpectedType("string")))))
+      }
+      "Missing values rejected" in {
+        verifyValidation[Strings](JObject(), Left(List(ValidationError("s", JNothing, MissingProperty()))))
+      }
+      "With default settings" - {
+        "Empty strings allowed" in {
           verifyValidation[String](JString(""), Right(""))
         }
-        "Rejected if allowEmptyStrings=false" in {
-          verifyValidation[String](JString(""), Left(List(ValidationError("", JString(""), EmptyString()))), ExtractionContext(SchemaFactory.default, allowEmptyStrings = false))
+      }
+      "When allowEmptyStrings=false" - {
+        val emptyStringsNotAllowed = ExtractionContext(SchemaFactory.default, allowEmptyStrings = false)
+        "Empty strings rejected" in {
+          verifyValidation[String](JString(""), Left(List(ValidationError("", JString(""), EmptyString()))), emptyStringsNotAllowed)
         }
       }
     }
