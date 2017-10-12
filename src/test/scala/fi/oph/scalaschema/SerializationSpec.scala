@@ -52,7 +52,7 @@ class SerializationSpec extends FreeSpec with Matchers {
     "with default settings, empty options are omitted" in {
       testSerialization(OptionalFields(None), """{}""")
     }
-    "alternative settings" in {
+    "with omitEmptyFields = false, empty options are output as nulls" in {
       testSerialization(OptionalFields(None), """{"field":null}""", defaultContext.copy(omitEmptyFields = false))
     }
   }

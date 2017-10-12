@@ -187,6 +187,6 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
   }
 }
 
-case class AnySchema() extends ElementSchema {
-  override def getSchema(className: String): Option[SchemaWithClassName] = None
-}
+case class AnySchema() extends SimpleSchema
+case class AnyObjectSchema() extends SimpleSchema
+case class AnyListSchema() extends SimpleSchema

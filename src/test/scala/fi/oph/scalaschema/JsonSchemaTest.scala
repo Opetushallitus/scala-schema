@@ -4,10 +4,13 @@ import com.github.fge.jsonschema.core.report.ListReportProvider
 import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import fi.oph.scalaschema.TestHelpers.schemaOf
+import org.json4s.{JArray, JValue}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
 import org.scalatest.{FreeSpec, Matchers}
+
+import reflect.runtime.universe.TypeTag
 
 class JsonSchemaTest extends FreeSpec with Matchers {
   "Simple example" - {
@@ -72,8 +75,16 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         jsonSchemaOf(classOf[TraitsInFields]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traits"}},"id":"#traitsinfields","additionalProperties":false,"title":"Traits in fields","required":["field"],"definitions":{"impla":{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},"implb":{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"},"traits":{"anyOf":[{"$ref":"#/definitions/impla"},{"$ref":"#/definitions/implb"}]}}}""")
       }
     }
-    "JValues" in {
-      jsonSchemaOf(classOf[WithJValue]) should equal("""{"type":"object","properties":{"x":{}},"id":"#withjvalue","additionalProperties":false,"title":"With j value","required":["x"]}""")
+    "JValues" - {
+      "JValue" in {
+        jsonSchemaOf[JValue] should equal("""{}""")
+      }
+      "JObject" in {
+        jsonSchemaOf[JObject] should equal("""{"type":"object"}""")
+      }
+      "JArray" in {
+        jsonSchemaOf[JArray] should equal("""{"type":"array"}""")
+      }
     }
     "Specialized schema -> no #id" in {
       jsonSchemaOf(schemaOf(classOf[RequiredFields]).asInstanceOf[ClassSchema].copy(specialized = true)) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"additionalProperties":false,"title":"Required fields","required":["field"]}""")
@@ -172,6 +183,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       }
     }
   }
+  def jsonSchemaOf[T : TypeTag]: String = jsonSchemaOf(SchemaFactory.default.createSchema[T])
   def jsonSchemaOf(c: Class[_]): String = jsonSchemaOf(schemaOf(c))
   def jsonSchemaOf(s: Schema): String = {
     val schemaJson = s.toJson
