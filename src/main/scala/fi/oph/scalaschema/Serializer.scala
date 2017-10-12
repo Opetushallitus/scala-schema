@@ -44,7 +44,9 @@ object Serializer {
       case s: NumberSchema => serializeNumber(x)
       case s: DateSchema => serializeDate(s, x)
       case s: BooleanSchema => serializeBoolean(x)
-      case s: AnySchema => serializeAny(s, x)
+      case s: AnySchema => serializeAny(x)
+      case s: AnyObjectSchema => serializeAny(x)
+      case s: AnyListSchema => serializeAny(x)
     }
   }
 
@@ -101,7 +103,7 @@ object Serializer {
     case _ => throw new RuntimeException("Not a Boolean: " + x)
   }
 
-  private def serializeAny(s: AnySchema, x: Any): JValue = x match {
+  private def serializeAny(x: Any): JValue = x match {
     case x: JValue => x
     case _ => throw new RuntimeException("Not a JValue: " + x)
   }

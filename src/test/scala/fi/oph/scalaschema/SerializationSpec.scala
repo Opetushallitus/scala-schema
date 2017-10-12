@@ -5,7 +5,8 @@ import java.time.{LocalDate, ZonedDateTime}
 import java.util.Date
 
 import org.joda.time.format.ISODateTimeFormat
-import org.json4s.JsonAST.{JObject, JString}
+import org.json4s.JValue
+import org.json4s.JsonAST.{JArray, JObject, JString}
 import org.scalatest.{FreeSpec, Matchers}
 
 import scala.reflect.runtime.{universe => ru}
@@ -70,9 +71,24 @@ class SerializationSpec extends FreeSpec with Matchers {
     json should equal(JObject("name" -> JString("name")))
   }
 
-  "JValue field" in {
-    testSerialization(WithJValue(JString("hello")), """{"x":"hello"}""")
+  "JValues" - {
+    "JValue field" in {
+      testSerialization(WithJValue(JString("hello")), """{"x":"hello"}""")
+    }
+
+    "JValue" in {
+      testSerialization(JString("hello").asInstanceOf[JValue], """"hello"""")
+    }
+
+    "JObject" in {
+      testSerialization(JObject(), """{}""")
+    }
+
+    "JArray" in {
+      testSerialization(JArray(List()), """[]""")
+    }
   }
+
 
   "custom field filtering" in {
     def skipOtherThanA(s: ClassSchema, p: Property) = if (p.key == "a") List(p) else Nil

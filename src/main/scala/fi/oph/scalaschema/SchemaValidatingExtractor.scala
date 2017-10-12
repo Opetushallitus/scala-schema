@@ -29,6 +29,14 @@ object SchemaValidatingExtractor {
       case ns: NumberSchema => NumberExtractor.extract(json, ns, metadata)
       case bs: BooleanSchema => BooleanExtractor.extract(json, bs, metadata)
       case as: AnySchema => Right(json)
+      case as: AnyObjectSchema => json match {
+        case json: JObject => Right(json)
+        case _ => Left(List(ValidationError(context.path, json, UnexpectedType("object"))))
+      }
+      case as: AnyListSchema => json match {
+        case json: JArray => Right(json)
+        case _ => Left(List(ValidationError(context.path, json, UnexpectedType("array"))))
+      }
       case _ => extractRequired(json, metadata) { schema match {
         case ls: ListSchema => ListExtractor.extractList(json, ls, metadata)
         case ms: MapSchema => MapExtractor.extractMap(json, ms, metadata)

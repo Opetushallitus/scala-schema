@@ -213,6 +213,17 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         }
       }
     }
+    "JValues" - {
+      "JValue" in {
+        verifyExtractionRoundTrip[JValue](JObject())
+      }
+      "JObject" in {
+        verifyExtractionRoundTrip[JObject](JObject())
+      }
+      "JArray" in {
+        verifyExtractionRoundTrip[JArray](JArray(List()))
+      }
+    }
     "Validation errors" - {
       "are serializable" in {
         // Verify this by constructing a Schema for ValidationError
