@@ -4,13 +4,13 @@ import com.github.fge.jsonschema.core.report.ListReportProvider
 import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import fi.oph.scalaschema.TestHelpers.schemaOf
-import org.json4s.{JArray, JValue}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
+import org.json4s.{JArray, JValue}
 import org.scalatest.{FreeSpec, Matchers}
 
-import reflect.runtime.universe.TypeTag
+import scala.reflect.runtime.universe.TypeTag
 
 class JsonSchemaTest extends FreeSpec with Matchers {
   "Simple example" - {
@@ -152,6 +152,10 @@ class JsonSchemaTest extends FreeSpec with Matchers {
           jsonSchemaOf(classOf[WithEnumValue]) should equal("""{"type":"object","properties":{"a":{"type":"string","enum":["a"],"minLength":1},"b":{"type":"string","enum":["b"],"minLength":1},"c":{"type":"array","items":{"type":"string","enum":["c"],"minLength":1}}},"id":"#withenumvalue","additionalProperties":false,"title":"With enum value","required":["a","c"]}""")
         }
       }
+
+      "Custom metadata annotations" in {
+        jsonSchemaOf(SchemaFactory(List(classOf[CustomAnnotation])).createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
+      }
     }
 
     "Title" - {
@@ -196,3 +200,10 @@ class JsonSchemaTest extends FreeSpec with Matchers {
   private lazy val jsonSchemaFactory = JsonSchemaFactory.newBuilder.setReportProvider(new ListReportProvider(ERROR, FATAL)).freeze()
   private lazy val validator: JsonValidator = JsonSchemaFactory.byDefault.getValidator
 }
+
+case class CustomAnnotation(numbers: List[Int]) extends Metadata {
+  override def appendMetadataToJsonSchema(obj: JObject): JObject = appendToDescription(obj, s"These numbers: ${numbers.mkString(",")}")
+}
+
+@CustomAnnotation(List(1, 2, 3))
+case class CustomAnnotated()
