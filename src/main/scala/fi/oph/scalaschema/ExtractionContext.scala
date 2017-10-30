@@ -25,7 +25,7 @@ case class JsonCursor(json: JValue, parent: Option[JsonCursor] = None, path: Str
   def subPath(pathElem: String) = JsonCursor.subPath(path, pathElem)
   def navigate(subPath: String) = {
     subPath.split("/").foldLeft(this) {
-      case (currentCursor, "..") => currentCursor.parent.getOrElse(throw new PathNotValidException(s"path $path not valid as a subpath of ${this.path}"))
+      case (currentCursor, "..") => currentCursor.parent.getOrElse(throw new PathNotValidException(s"path $subPath not valid as a subpath of ${this.path}"))
       case (currentCursor, pathElem) => currentCursor.subCursor(currentCursor.json \ pathElem, pathElem)
     }
   }
