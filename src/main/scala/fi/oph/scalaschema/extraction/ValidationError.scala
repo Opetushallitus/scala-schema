@@ -1,6 +1,6 @@
 package fi.oph.scalaschema.extraction
 
-import fi.oph.scalaschema.annotation.{EnumValue, OnlyWhen}
+import fi.oph.scalaschema.annotation.{EnumValue, SerializableOnlyWhen}
 import org.json4s.JValue
 
 case class ValidationError(path: String, value: JValue, error: ValidationRuleViolation)
@@ -22,5 +22,3 @@ case class LessThanMinimumNumberOfItems(minimumItems: Int, @EnumValue("lessThanM
 case class MoreThanMaximumNumberOfItems(maximumItems: Int, @EnumValue("moreThanMaximumNumberOfItems") errorType: String = "moreThanMaximumNumberOfItems") extends ValidationRuleViolation
 case class OtherViolation(message: String, @EnumValue("otherViolation") errorType: String = "otherViolation") extends ValidationRuleViolation
 case class OnlyWhenMismatch(oneOfMustMatch: List[SerializableOnlyWhen], @EnumValue("onlyWhenMismatch") errorType: String="onlyWhenMismatch") extends ValidationRuleViolation
-
-case class SerializableOnlyWhen(path: String, value: JValue)

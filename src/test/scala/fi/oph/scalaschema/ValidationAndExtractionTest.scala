@@ -5,7 +5,7 @@ import java.sql.Timestamp
 import java.time.{LocalDate, ZonedDateTime}
 import java.util.Date
 
-import fi.oph.scalaschema.annotation.{DefaultValue, Discriminator, EnumValue, OnlyWhen}
+import fi.oph.scalaschema.annotation._
 import fi.oph.scalaschema.extraction.{ValidationError, _}
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST._
@@ -205,6 +205,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         }
         "@EnumValue annotation in @Discriminator field" in {
           verifyExtractionRoundTrip[DiscriminatorResolving](TypeA())
+          verifyExtractionRoundTrip[DiscriminatorResolving](TypeB())
           verifyExtractionRoundTrip[DiscriminatorResolving](Type2())
         }
         "@EnumValue annotation in optional @Discriminator field" in {
@@ -216,15 +217,36 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
     "@OnlyWhen annotation" - {
       "When applied to fields" - {
         "Allows field only when value matches" in {
-          val expectedError = ValidationError("thing.field", JString("bogus"), OnlyWhenMismatch(List(SerializableOnlyWhen("../number", JInt(1)))))
-          verifyValidation[OnlyWhenFieldContainer](JObject("number" -> JInt(2), "thing" -> JObject("field" -> JString("bogus"))), Left(List(expectedError)))
+          val expectedError = OnlyWhenMismatch(List(SerializableOnlyWhen("../number", JInt(1))))
+          verifyValidation[OnlyWhenFieldContainer](JObject("number" -> JInt(2), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
           verifyValidation[OnlyWhenFieldContainer](JObject("number" -> JInt(1), "thing" -> JObject("field" -> JString("bogus"))), Right(OnlyWhenFieldContainer(1, WithOnlyWhenFieldsInParent(Some("bogus")))))
         }
 
-        "Works with @DefaultValue" in {
-          verifyValidation[WithOnlyWhenFieldsWithDefaultValue](JObject("allow" -> JBool(false), "field" -> JString("hello2")), Left(List(ValidationError("field", JString("hello2"), OnlyWhenMismatch(List(SerializableOnlyWhen("allow", JBool(true))))))))
-          verifyValidation[WithOnlyWhenFieldsWithDefaultValue](JObject("allow" -> JBool(false)), Right(WithOnlyWhenFieldsWithDefaultValue(false, "hello")))
-          verifyValidation[WithOnlyWhenFieldsWithDefaultValue](JObject("allow" -> JBool(true), "field" -> JString("hello2")), Right(WithOnlyWhenFieldsWithDefaultValue(true, "hello2")))
+        "Works with @DefaultValue and multiple allowed alternatives" in {
+          val expectedError = OnlyWhenMismatch(List(SerializableOnlyWhen("asdf", JInt(1)), SerializableOnlyWhen("asdf", JInt(2))))
+          verifyValidation[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("asdf" -> JInt(3), "field" -> JString("hello2")), Left(List(ValidationError("field", JString("hello2"), expectedError))))
+          verifyValidation[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("asdf" -> JInt(3)), Right(WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(3, "hello")))
+          verifyValidation[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("asdf" -> JInt(1), "field" -> JString("hello2")), Right(WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(1, "hello2")))
+        }
+      }
+
+      "When applied to case classes" - {
+        "Restricts the allowed alternatives in AnyOf schemas" in {
+          val expectedError = NotAnyOf(Map(
+            "alta" -> List("""property "name" exists"""),
+            "altb" -> List("""../allowAll=true""")
+          ))
+          verifyValidation[WrapperForTraitWithRestrictions](JObject("allowAll" -> JBool(false), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+          verifyValidation[WrapperForTraitWithRestrictions](JObject("allowAll" -> JBool(true), "field" -> JObject()), Right(WrapperForTraitWithRestrictions(AltB(), true)))
+        }
+
+        "Works with multiple @OnlyWhen annotations per case class" in {
+          val expectedError = NotAnyOf(Map(
+            "alt1" -> List("""property "name" exists"""),
+            "alt2" -> List("""../asdf=1 or ../asdf=2""")
+          ))
+          verifyValidation[WrapperForTraitWithMultipleRestrictions](JObject("asdf" -> JInt(3), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+          verifyValidation[WrapperForTraitWithMultipleRestrictions](JObject("asdf" -> JInt(2), "field" -> JObject()), Right(WrapperForTraitWithMultipleRestrictions(Alt2(), 2)))
         }
       }
     }
@@ -310,8 +332,22 @@ case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d:
 case class OnlyWhenFieldContainer(number: Int, thing: WithOnlyWhenFieldsInParent)
 case class WithOnlyWhenFieldsInParent(@OnlyWhen("../number", 1) field: Option[String])
 
-case class WithOnlyWhenFieldsWithDefaultValue(
-                                               allow: Boolean,
-                                               @OnlyWhen("allow", true)
-                                               @DefaultValue("hello")
-                                               field: String)
+case class WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(
+   asdf: Int,
+   @OnlyWhen("asdf", 1)
+   @OnlyWhen("asdf", 2)
+   @DefaultValue("hello")
+   field: String)
+
+case class WrapperForTraitWithRestrictions(field: TraitWithRestrictions, allowAll: Boolean)
+sealed trait TraitWithRestrictions
+case class AltA(name: String) extends TraitWithRestrictions
+@OnlyWhen("../allowAll", true)
+case class AltB() extends TraitWithRestrictions
+
+case class WrapperForTraitWithMultipleRestrictions(field: TraitWithMultipleRestrictions, asdf: Int)
+sealed trait TraitWithMultipleRestrictions
+case class Alt1(name: String) extends TraitWithMultipleRestrictions
+@OnlyWhen("../asdf", 1)
+@OnlyWhen("../asdf", 2)
+case class Alt2() extends TraitWithMultipleRestrictions

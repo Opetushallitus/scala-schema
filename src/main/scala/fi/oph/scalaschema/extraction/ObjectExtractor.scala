@@ -1,7 +1,7 @@
 package fi.oph.scalaschema.extraction
 
 import fi.oph.scalaschema._
-import fi.oph.scalaschema.annotation.OnlyWhen
+import fi.oph.scalaschema.annotation.{OnlyWhen, SerializableOnlyWhen}
 import org.json4s.JsonAST.JObject
 import org.json4s._
 
@@ -21,16 +21,13 @@ object ObjectExtractor {
               case _ => true
             }
 
-            val onlyWhenAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case OnlyWhen(path, value) if valuePresent => SerializableOnlyWhen(path, anyToJValue(value)) }
+            val onlyWhenAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case o:OnlyWhen if valuePresent => o.serializableForm }
 
             val onlyWhenMismatch: Option[OnlyWhenMismatch] = onlyWhenAnnotations match {
               case Nil => None
               case _ =>
                 val found = onlyWhenAnnotations.find { case SerializableOnlyWhen(path, expectedValue) =>
-                  val valueFromPath: JValue = path.split("/").foldLeft(cursor) {
-                    case (currentCursor, "..") => currentCursor.parent.getOrElse(throw new PathNotValidException(s"path $path not valid as a subpath of ${cursor.path}"))
-                    case (currentCursor, pathElem) => currentCursor.subCursor(currentCursor.json \ pathElem, pathElem)
-                  }.json
+                  val valueFromPath: JValue = cursor.navigate(path).json
                   valueFromPath == expectedValue
                 }
                 if (found.isDefined) {
@@ -66,10 +63,5 @@ object ObjectExtractor {
         }
       case json => Left(List(ValidationError(cursor.path, json, UnexpectedType("object"))))
     }
-  }
-
-  def anyToJValue(x: Any) = {
-    import Serializer.format
-    Extraction.decompose(x)
   }
 }

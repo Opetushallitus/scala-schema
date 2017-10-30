@@ -1,7 +1,7 @@
 package fi.oph.scalaschema
 
 import fi.oph.scalaschema.extraction.AnyOfExtractor.CriteriaCollection
-import fi.oph.scalaschema.extraction.{CustomDeserializer, ValidationError}
+import fi.oph.scalaschema.extraction.{CustomDeserializer, PathNotValidException, ValidationError}
 import org.json4s.JValue
 
 /**
@@ -23,6 +23,12 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
 case class JsonCursor(json: JValue, parent: Option[JsonCursor] = None, path: String = "") {
   def subCursor(json: JValue, pathElem: String) = JsonCursor(json, Some(this), subPath(pathElem))
   def subPath(pathElem: String) = JsonCursor.subPath(path, pathElem)
+  def navigate(subPath: String) = {
+    subPath.split("/").foldLeft(this) {
+      case (currentCursor, "..") => currentCursor.parent.getOrElse(throw new PathNotValidException(s"path $path not valid as a subpath of ${this.path}"))
+      case (currentCursor, pathElem) => currentCursor.subCursor(currentCursor.json \ pathElem, pathElem)
+    }
+  }
 }
 
 object JsonCursor {
