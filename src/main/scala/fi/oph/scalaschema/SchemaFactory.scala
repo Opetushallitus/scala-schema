@@ -276,7 +276,7 @@ object Annotations {
   }
 
   import scala.tools.reflect.ToolBox
-  private val tb = reflect.runtime.currentMirror.mkToolBox()
+  private lazy val tb = reflect.runtime.currentMirror.mkToolBox()
 
   private def unescapeJava(str: Any) = StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", ""))
 
