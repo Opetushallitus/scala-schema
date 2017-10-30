@@ -6,34 +6,34 @@ import org.json4s.JsonAST.JObject
 import org.json4s._
 
 object AnyOfExtractor {
-  private def criteriaForSchema(schema: SchemaWithClassName)(implicit context: ExtractionContext, rootSchema: Schema) = context.criteriaCache.synchronized {
+  private def criteriaForSchema(schema: SchemaWithClassName, cursor: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema) = context.criteriaCache.synchronized {
     context.criteriaCache.getOrElseUpdate(schema.fullClassName, {
-      discriminatorCriteria(schema, KeyPath.root)
+      discriminatorCriteria(cursor.path, schema, KeyPath.root)
     })
   }
 
-  def extractAnyOf(json: JValue, as: AnyOfSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
+  def extractAnyOf(cursor: JsonCursor, as: AnyOfSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
     val mapping: List[(SchemaWithClassName, CriteriaCollection)] = as.alternatives.filterNot(ignoredAlternative).map { schema =>
-      (schema, criteriaForSchema(schema))
+      (schema, criteriaForSchema(schema, cursor))
     }.sortBy(-_._2.weight)
 
     val matchingSchemas = mapping.collect {
-      case (schema, criteria) if criteria.matches(json) =>
+      case (schema, criteria) if criteria.matches(cursor.json) =>
         (schema, criteria)
     }
 
     matchingSchemas match {
       case Nil =>
-        val allowedAlternatives: List[(String, List[String])] = mapping.map { case (schema, criteria) => (schema.simpleName, criteria.apply(json)) }
-        Left(List(ValidationError(context.path, json, NotAnyOf(allowedAlternatives.toMap))))
+        val allowedAlternatives: List[(String, List[String])] = mapping.map { case (schema, criteria) => (schema.simpleName, criteria.apply(cursor.json)) }
+        Left(List(ValidationError(cursor.path, cursor.json, NotAnyOf(allowedAlternatives.toMap))))
       case _ =>
         val maxWeight = matchingSchemas.head._2.weight
         val schemasWithMaximumNumberOfMatchingCriteria = matchingSchemas.filter { case (_, criteria) => criteria.weight == maxWeight }
         schemasWithMaximumNumberOfMatchingCriteria match {
           case List((schema, criteria)) =>
-            SchemaValidatingExtractor.extract(json, schema, metadata)
+            SchemaValidatingExtractor.extract(cursor, schema, metadata)
           case _ =>
-            throw new TooManyMatchingCasesException(context.path, schemasWithMaximumNumberOfMatchingCriteria, json)
+            throw new TooManyMatchingCasesException(cursor.path, schemasWithMaximumNumberOfMatchingCriteria, cursor.json)
         }
     }
   }
@@ -42,32 +42,32 @@ object AnyOfExtractor {
     schema.metadata.contains(IgnoreInAnyOfDeserialization())
   }
 
-  private def discriminatorCriteria(schema: SchemaWithClassName, keyPath: KeyPath)(implicit context: ExtractionContext, rootSchema: Schema): CriteriaCollection = schema match {
+  private def discriminatorCriteria(contextPath: String, schema: SchemaWithClassName, keyPath: KeyPath)(implicit context: ExtractionContext, rootSchema: Schema): CriteriaCollection = schema match {
     case s: ClassRefSchema =>
-      discriminatorCriteria(SchemaResolver.resolveSchema(s), keyPath)
+      discriminatorCriteria(contextPath, SchemaResolver.resolveSchema(s, contextPath), keyPath)
     case s: ClassSchema =>
       val discriminatorProps: List[Property] = s.properties.filter(_.metadata.contains(Discriminator()))
       discriminatorProps match {
         case Nil =>
-          CriteriaCollection(NoOtherPropertiesThan(keyPath, s.properties.map(_.key)) :: (s.properties.flatMap(propertyMatchers(keyPath, _))))
+          CriteriaCollection(NoOtherPropertiesThan(keyPath, s.properties.map(_.key)) :: (s.properties.flatMap(propertyMatchers(contextPath, keyPath, _))))
         case props =>
-          CriteriaCollection(props.flatMap(propertyMatchers(keyPath, _)))
+          CriteriaCollection(props.flatMap(propertyMatchers(contextPath, keyPath, _)))
       }
     case _ => throw new RuntimeException(s"Only ClassSchema, ClassRefSchema supported as alternatives in AnyOfSchema (found ${schema})")
   }
 
-  private def propertyMatchers(keyPath:KeyPath, property: Property)(implicit context: ExtractionContext, rootSchema: Schema): List[DiscriminatorCriterion] = {
+  private def propertyMatchers(contextPath: String, keyPath:KeyPath, property: Property)(implicit context: ExtractionContext, rootSchema: Schema): List[DiscriminatorCriterion] = {
     val propertyPath = keyPath.concat(property.key)
     property.schema match {
       case s: OptionalSchema if !property.metadata.contains(Discriminator()) => Nil // Optional attribute are required only when marked with @Discriminator
-      case OptionalSchema(s) => propertyMatchers(keyPath, property.copy(schema = s)) // OptionalSchema with Discriminator => dig deeper
+      case OptionalSchema(s) => propertyMatchers(contextPath, keyPath, property.copy(schema = s)) // OptionalSchema with Discriminator => dig deeper
       case s: StringSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: NumberSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: BooleanSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
-      case s: ClassRefSchema => propertyMatchers(keyPath, property.copy(schema = SchemaResolver.resolveSchema(s)))
+      case s: ClassRefSchema => propertyMatchers(contextPath, keyPath, property.copy(schema = SchemaResolver.resolveSchema(s, contextPath)))
       case s: ClassSchema =>
         List(PropertyExists(propertyPath)) ++ s.properties.flatMap { nestedProperty =>
-          discriminatorCriteria(s, propertyPath).criteria
+          discriminatorCriteria(JsonCursor.subPath(contextPath, nestedProperty.key), s, propertyPath).criteria
         }
       case s =>
         List(PropertyExists(propertyPath))

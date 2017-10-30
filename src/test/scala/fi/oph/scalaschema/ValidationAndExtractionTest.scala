@@ -5,7 +5,7 @@ import java.sql.Timestamp
 import java.time.{LocalDate, ZonedDateTime}
 import java.util.Date
 
-import fi.oph.scalaschema.annotation.{Discriminator, EnumValue}
+import fi.oph.scalaschema.annotation.{DefaultValue, Discriminator, EnumValue, OnlyWhen}
 import fi.oph.scalaschema.extraction.{ValidationError, _}
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST._
@@ -213,6 +213,21 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         }
       }
     }
+    "@OnlyWhen annotation" - {
+      "When applied to fields" - {
+        "Allows field only when value matches" in {
+          val expectedError = ValidationError("thing.field", JString("bogus"), OnlyWhenMismatch(List(SerializableOnlyWhen("../number", JInt(1)))))
+          verifyValidation[OnlyWhenFieldContainer](JObject("number" -> JInt(2), "thing" -> JObject("field" -> JString("bogus"))), Left(List(expectedError)))
+          verifyValidation[OnlyWhenFieldContainer](JObject("number" -> JInt(1), "thing" -> JObject("field" -> JString("bogus"))), Right(OnlyWhenFieldContainer(1, WithOnlyWhenFieldsInParent(Some("bogus")))))
+        }
+
+        "Works with @DefaultValue" in {
+          verifyValidation[WithOnlyWhenFieldsWithDefaultValue](JObject("allow" -> JBool(false), "field" -> JString("hello2")), Left(List(ValidationError("field", JString("hello2"), OnlyWhenMismatch(List(SerializableOnlyWhen("allow", JBool(true))))))))
+          verifyValidation[WithOnlyWhenFieldsWithDefaultValue](JObject("allow" -> JBool(false)), Right(WithOnlyWhenFieldsWithDefaultValue(false, "hello")))
+          verifyValidation[WithOnlyWhenFieldsWithDefaultValue](JObject("allow" -> JBool(true), "field" -> JString("hello2")), Right(WithOnlyWhenFieldsWithDefaultValue(true, "hello2")))
+        }
+      }
+    }
     "JValues" - {
       "JValue" in {
         verifyExtractionRoundTrip[JValue](JObject())
@@ -291,3 +306,12 @@ case class JavaNumbers(i: Integer, f: java.lang.Float, l: java.lang.Long, d: jav
 case class BigNumbers(bi: BigInt, bd : BigDecimal)
 case class MoreNumbersInLists(i: List[Int], f: List[Float], l: List[Long], d: List[Double], bd : List[BigDecimal], bi: List[BigInt])
 case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d: Option[Double], bd : Option[BigDecimal], bi: Option[BigInt])
+
+case class OnlyWhenFieldContainer(number: Int, thing: WithOnlyWhenFieldsInParent)
+case class WithOnlyWhenFieldsInParent(@OnlyWhen("../number", 1) field: Option[String])
+
+case class WithOnlyWhenFieldsWithDefaultValue(
+                                               allow: Boolean,
+                                               @OnlyWhen("allow", true)
+                                               @DefaultValue("hello")
+                                               field: String)

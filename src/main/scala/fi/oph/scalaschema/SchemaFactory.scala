@@ -10,7 +10,6 @@ import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.joda.time.DateTime
-import org.json4s.scalap.scalasig.NullaryMethodType
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
@@ -20,7 +19,7 @@ import scala.util.Try
 object SchemaFactory {
   val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[DefaultValue],
     classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive],
-    classOf[RegularExpression],
+    classOf[RegularExpression], classOf[OnlyWhen],
     classOf[EnumValue], classOf[Discriminator], classOf[IgnoreInAnyOfDeserialization])
   lazy val default = SchemaFactory(defaultAnnotations)
 }

@@ -4,9 +4,9 @@ import fi.oph.scalaschema._
 import org.json4s._
 
 object OptionalExtractor {
-  def extractOptional(json: JValue, as: OptionalSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = json match {
+  def extractOptional(cursor: JsonCursor, schema: OptionalSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = cursor.json match {
     case JNothing => Right(None)
     case JNull => Right(None)
-    case _ => SchemaValidatingExtractor.extract(json, as.itemSchema, metadata).right.map(value => Some(value))
+    case _ => SchemaValidatingExtractor.extract(cursor, schema.itemSchema, metadata).right.map(value => Some(value))
   }
 }

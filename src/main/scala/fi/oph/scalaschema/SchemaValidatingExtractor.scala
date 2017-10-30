@@ -23,44 +23,48 @@ object SchemaValidatingExtractor {
   }
 
   def extract(json: JValue, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
+    extract(JsonCursor(json), schema, metadata)
+  }
+
+  def extract(cursor: JsonCursor, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
     schema match {
-      case os: OptionalSchema => OptionalExtractor.extractOptional(json, os, metadata)
-      case ss: StringSchema => StringExtractor.extract(json, ss, metadata)
-      case ns: NumberSchema => NumberExtractor.extract(json, ns, metadata)
-      case bs: BooleanSchema => BooleanExtractor.extract(json, bs, metadata)
-      case as: AnySchema => Right(json)
-      case as: AnyObjectSchema => json match {
+      case os: OptionalSchema => OptionalExtractor.extractOptional(cursor, os, metadata)
+      case ss: StringSchema => StringExtractor.extract(cursor, ss, metadata)
+      case ns: NumberSchema => NumberExtractor.extract(cursor, ns, metadata)
+      case bs: BooleanSchema => BooleanExtractor.extract(cursor, bs, metadata)
+      case as: AnySchema => Right(cursor.json)
+      case as: AnyObjectSchema => cursor.json match {
         case json: JObject => Right(json)
-        case _ => Left(List(ValidationError(context.path, json, UnexpectedType("object"))))
+        case _ => Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("object"))))
       }
-      case as: AnyListSchema => json match {
+      case as: AnyListSchema => cursor.json match {
         case json: JArray => Right(json)
-        case _ => Left(List(ValidationError(context.path, json, UnexpectedType("array"))))
+        case _ => Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("array"))))
       }
-      case _ => extractRequired(json, metadata) { schema match {
-        case ls: ListSchema => ListExtractor.extractList(json, ls, metadata)
-        case ms: MapSchema => MapExtractor.extractMap(json, ms, metadata)
-        case ds: DateSchema => DateExtractor.extractDate(json, ds, metadata)
+      case _ => extractRequired(cursor, metadata) { schema match {
+        case ls: ListSchema => ListExtractor.extractList(cursor, ls, metadata)
+        case ms: MapSchema => MapExtractor.extractMap(cursor, ms, metadata)
+        case ds: DateSchema => DateExtractor.extractDate(cursor, ds, metadata)
         case cs: SchemaWithClassName =>
-          json match {
+          cursor.json match {
             case _: JObject =>
               (context.customSerializerFor(cs), cs) match {
-                case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(json, cs, metadata)
-                case (_, cs: ClassRefSchema) => extract(json, SchemaResolver.resolveSchema(cs), metadata)
-                case (_, cs: ClassSchema) => ObjectExtractor.extractObject(json, cs, metadata)
-                case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(json, as, metadata)
+                case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(cursor.json, cs, metadata)
+                case (_, cs: ClassRefSchema) => extract(cursor, SchemaResolver.resolveSchema(cs, cursor.path), metadata)
+                case (_, cs: ClassSchema) => ObjectExtractor.extractObject(cursor, cs, metadata)
+                case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(cursor, as, metadata)
               }
             case _ =>
-              Left(List(ValidationError(context.path, json, UnexpectedType("object"))))
+              Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("object"))))
           }
         case _ => throw new RuntimeException(s"Unexpected schema type ${schema}")
       }}
     }
   }
 
-  private def extractRequired[T](json: JValue, metadata: List[Metadata])(doExtract: => Either[List[ValidationError], T])(implicit context: ExtractionContext) = json match {
+  private def extractRequired[T](cursor: JsonCursor, metadata: List[Metadata])(doExtract: => Either[List[ValidationError], T])(implicit context: ExtractionContext) = cursor.json match {
     case JNothing =>
-      Left(List(ValidationError(context.path, json, MissingProperty())))
+      Left(List(ValidationError(cursor.path, cursor.json, MissingProperty())))
     case _ =>
       doExtract
   }

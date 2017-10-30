@@ -2,6 +2,7 @@ package fi.oph.scalaschema
 
 import fi.oph.scalaschema.extraction.AnyOfExtractor.CriteriaCollection
 import fi.oph.scalaschema.extraction.{CustomDeserializer, ValidationError}
+import org.json4s.JValue
 
 /**
   * Context for extraction/validation. Just initialize with a schema factory and you're good to go. You can optionally supply some CustomSerializers too.
@@ -13,13 +14,20 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
                              validate: Boolean = true,
                              ignoreUnexpectedProperties: Boolean = false,
                              allowEmptyStrings: Boolean = true,
-                             path: String = "", criteriaCache: collection.mutable.Map[String, CriteriaCollection] = collection.mutable.Map.empty) {
+                             criteriaCache: collection.mutable.Map[String, CriteriaCollection] = collection.mutable.Map.empty) {
   def hasSerializerFor(schema: SchemaWithClassName) = customSerializerFor(schema).isDefined
   def customSerializerFor(schema: SchemaWithClassName) = customDeserializers.find(_.isApplicable(schema))
   def ifValidating(errors: => List[ValidationError]) = if (validate) { errors } else { Nil }
-  def subPath(elem: String) = path match {
-    case "" => elem
-    case _ => path + "." + elem
+}
+
+case class JsonCursor(json: JValue, parent: Option[JsonCursor] = None, path: String = "") {
+  def subCursor(json: JValue, pathElem: String) = JsonCursor(json, Some(this), subPath(pathElem))
+  def subPath(pathElem: String) = JsonCursor.subPath(path, pathElem)
+}
+
+object JsonCursor {
+  def subPath(path: String, pathElem: String) = path match {
+    case "" => pathElem
+    case _ => path + "." + pathElem
   }
-  def subContext(pathElem: String) = copy(path = subPath(pathElem))
 }
