@@ -265,15 +265,60 @@ private object TraitImplementationFinder {
 }
 
 object Annotations {
-  import scala.tools.reflect.ToolBox
-  val tb = reflect.runtime.currentMirror.mkToolBox()
   def findAnnotations(symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
     symbol.annotations.flatMap { annotation =>
       val annotationType: String = annotation.tree.tpe.toString
       annotationsSupported.find(_.getName == annotationType) map { annotationClass =>
-        val evaluated = tb.eval(tb.untypecheck(annotation.tree))
-        evaluated.asInstanceOf[StaticAnnotation]
+        val annotationParams: List[ru.Tree] = annotation.tree.children.tail
+        Annotations.parseAnnotation(annotationClass, annotationParams)
       }
+    }
+  }
+
+  import scala.tools.reflect.ToolBox
+  private val tb = reflect.runtime.currentMirror.mkToolBox()
+
+  private def unescapeJava(str: Any) = StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", ""))
+
+  private def parseAnnotation(annotationClass: Class[_ <: StaticAnnotation], params: List[ru.Tree]): StaticAnnotation = {
+    val StringClass = classOf[String]
+    val DoubleClass = classOf[Double]
+    val IntegerClass = classOf[Int]
+    val BooleanClass = classOf[Boolean]
+
+    val constructor: Constructor[_] = annotationClass.getConstructors()(0)
+
+    def parseAsDouble(v: Any) = new lang.Double(v.toString.toDouble)
+    def parseAsInteger(v: Any) = new lang.Integer(v.toString.toDouble.toInt)
+    def parseAsBoolean(v: Any) = new lang.Boolean(v.toString.toBoolean)
+
+    def parseAnnotationParam(klass: Class[_], value: ru.Tree): AnyRef = (klass, value) match {
+      case (_, value) if (value.toString.startsWith("\"")) => unescapeJava(value)
+      case (_, value) if (value.toString == "scala.None") => None
+      case (DoubleClass, value) => parseAsDouble(value)
+      case (IntegerClass, value) => parseAsInteger(value)
+      case (BooleanClass, value) => parseAsBoolean(value)
+      case (tyep, value) =>
+        Try(parseAsInteger(value.toString.toInt))
+          .orElse(Try(parseAsDouble(value.toString.toDouble)))
+          .orElse(Try(parseAsBoolean(value.toString.toBoolean)))
+          .getOrElse {
+            val evaluated = tb.eval(tb.untypecheck(value))
+            //println("Expensive: " + annotationClass.getName + " / " + tyep.getName + " = " + value)
+            evaluated.asInstanceOf[AnyRef]
+          }
+    }
+
+    val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex
+      .map {
+        case (klass, index) => parseAnnotationParam(klass, params(index))
+      }
+
+    try {
+      constructor.newInstance(constructorParams:_*).asInstanceOf[StaticAnnotation]
+    } catch {
+      case e: IllegalArgumentException =>
+        throw new RuntimeException(s"Error parsing annotation $annotationClass with params $params resulting to constructorParams ${constructorParams.toList.map(_.getClass.getName)} while expecting ${constructor.getParameterTypes.toList.map(_.getName)}", e)
     }
   }
 }
