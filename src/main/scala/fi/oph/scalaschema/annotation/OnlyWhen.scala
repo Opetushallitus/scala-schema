@@ -9,4 +9,4 @@ case class OnlyWhen(path: String, value: Any) extends Metadata {
   def serializableForm = SerializableOnlyWhen(path, AnyToJson.anyToJValue(value))
 }
 
-protected [scalaschema] case class SerializableOnlyWhen(path: String, value: JValue)
+case class SerializableOnlyWhen(path: String, value: JValue)
