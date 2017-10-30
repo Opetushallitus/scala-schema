@@ -30,8 +30,7 @@ case class AnnotatedCat(
 )
 
 object ExampleWithCustomAnnotations extends App {
-  val annotations = classOf[ReadOnly] :: SchemaFactory.defaultAnnotations
-  val schema: Schema = SchemaFactory(annotations).createSchema[AnnotatedCat]
+  val schema: Schema = SchemaFactory.default.createSchema[AnnotatedCat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)

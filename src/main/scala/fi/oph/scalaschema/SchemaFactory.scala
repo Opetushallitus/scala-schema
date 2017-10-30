@@ -10,6 +10,7 @@ import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
 import org.apache.commons.lang3.StringEscapeUtils
 import org.joda.time.DateTime
+import org.json4s.scalap.scalasig.ClassSymbol
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
@@ -17,14 +18,10 @@ import scala.reflect.runtime.{universe => ru}
 import scala.util.Try
 
 object SchemaFactory {
-  val defaultAnnotations: List[Class[_ <: Metadata]] = List(classOf[Title], classOf[Description], classOf[DefaultValue],
-    classOf[MaxItems], classOf[MinItems], classOf[MaxValue], classOf[MinValue], classOf[MinValueExclusive], classOf[MaxValueExclusive],
-    classOf[RegularExpression], classOf[OnlyWhen],
-    classOf[EnumValue], classOf[Discriminator], classOf[IgnoreInAnyOfDeserialization])
-  lazy val default = SchemaFactory(defaultAnnotations)
+  lazy val default = SchemaFactory()
 }
 
-case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil) {
+case class SchemaFactory() {
   private val cachedSchemas: collection.mutable.Map[ru.Type, Schema] = collection.mutable.Map.empty
 
   def createSchema(className: String): SchemaWithClassName = {
@@ -152,8 +149,9 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     state.foundTypes.add(className)
 
     val constructorParams: List[(ru.Symbol, Boolean)] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil).map((_, false))
-
-    val syntheticProperties: List[(ru.Symbol, Boolean)] = (members(tpe) ++ traits.flatMap(members)).filter(_.isMethod).filter (!findAnnotations(_, List(classOf[SyntheticProperty])).isEmpty)
+    val syntheticProperties: List[(ru.Symbol, Boolean)] = (members(tpe) ++ traits.flatMap(members))
+      .filter(_.isMethod)
+      .filter (findAnnotations(_, { symbol => symbol == ru.typeOf[SyntheticProperty].typeSymbol}).nonEmpty)
       .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
       .filterNot(sym => constructorParams.map(_._1.name).contains(sym.name)) // <- remove if overridden in case class constructor
       .map((_, true))
@@ -204,7 +202,8 @@ case class SchemaFactory(annotationsSupported: List[Class[_ <: Metadata]] = Nil)
     })
 
   private def applyMetadataAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
-    findAnnotations(symbol, annotationsSupported).asInstanceOf[List[Metadata]].foldLeft(x) {
+    val checkIfMetadataAnnotation = { symbol: ru.Symbol => symbol.asClass.baseClasses.contains(ru.typeOf[Metadata].typeSymbol) }
+    findAnnotations(symbol, checkIfMetadataAnnotation).asInstanceOf[List[Metadata]].foldLeft(x) {
       case (current, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
     }
   }
@@ -265,10 +264,10 @@ private object TraitImplementationFinder {
 }
 
 object Annotations {
-  def findAnnotations(symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
+  def findAnnotations(symbol: ru.Symbol, annotationsSupported: ru.Symbol => Boolean): List[StaticAnnotation] = {
     symbol.annotations.flatMap { annotation =>
-      val annotationType: String = annotation.tree.tpe.toString
-      annotationsSupported.find(_.getName == annotationType) map { annotationClass =>
+      val tpe: ru.Symbol = annotation.tree.tpe.typeSymbol
+      Some(tpe).filter(annotationsSupported).map { annotationClass =>
         val annotationParams: List[ru.Tree] = annotation.tree.children.tail
         Annotations.parseAnnotation(annotationClass, annotationParams)
       }
@@ -280,12 +279,13 @@ object Annotations {
 
   private def unescapeJava(str: Any) = StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", ""))
 
-  private def parseAnnotation(annotationClass: Class[_ <: StaticAnnotation], params: List[ru.Tree]): StaticAnnotation = {
+  private def parseAnnotation(annotationSymbol: ru.Symbol, params: List[ru.Tree]): StaticAnnotation = {
     val StringClass = classOf[String]
     val DoubleClass = classOf[Double]
     val IntegerClass = classOf[Int]
     val BooleanClass = classOf[Boolean]
 
+    val annotationClass = Class.forName(annotationSymbol.asClass.fullName)
     val constructor: Constructor[_] = annotationClass.getConstructors()(0)
 
     def parseAsDouble(v: Any) = new lang.Double(v.toString.toDouble)

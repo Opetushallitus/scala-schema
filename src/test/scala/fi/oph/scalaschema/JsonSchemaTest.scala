@@ -154,7 +154,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       }
 
       "Custom metadata annotations" in {
-        jsonSchemaOf(SchemaFactory(List(classOf[CustomAnnotation])).createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
+        jsonSchemaOf(SchemaFactory.default.createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
       }
     }
 
