@@ -232,6 +232,12 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         "Allows a value matching @DefaultValue even when @OnlyWhen says it's not ok" in {
           verifyExtractionRoundTrip[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(3, "hello"))
         }
+
+        "Allows null-checking by using None as value" in {
+          verifyValidation[FieldOkIfParentMissing](JObject("field" -> JString("hello")), Right(FieldOkIfParentMissing(Some("hello"))))
+          verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Left(List(ValidationError("thing.field",JString("hello"),OnlyWhenMismatch(List(SerializableOnlyWhen("..",JNothing)))))))
+          verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject()), Right(WrapperForTraitOkIfParentMissing(FieldOkIfParentMissing(None))))
+        }
       }
 
       "When applied to case classes" - {
@@ -355,3 +361,6 @@ case class Alt1(name: String) extends TraitWithMultipleRestrictions
 @OnlyWhen("../asdf", 1)
 @OnlyWhen("../asdf", 2)
 case class Alt2() extends TraitWithMultipleRestrictions
+
+case class FieldOkIfParentMissing(@OnlyWhen("..", None) field: Option[String])
+case class WrapperForTraitOkIfParentMissing(thing: FieldOkIfParentMissing)

@@ -1,8 +1,9 @@
 package fi.oph.scalaschema
 
 import fi.oph.scalaschema.extraction.AnyOfExtractor.CriteriaCollection
-import fi.oph.scalaschema.extraction.{CustomDeserializer, PathNotValidException, ValidationError}
+import fi.oph.scalaschema.extraction.{CustomDeserializer, ValidationError}
 import org.json4s.JValue
+import org.json4s.JsonAST.JNothing
 
 /**
   * Context for extraction/validation. Just initialize with a schema factory and you're good to go. You can optionally supply some CustomSerializers too.
@@ -25,7 +26,7 @@ case class JsonCursor(json: JValue, parent: Option[JsonCursor] = None, path: Str
   def subPath(pathElem: String) = JsonCursor.subPath(path, pathElem)
   def navigate(subPath: String) = {
     subPath.split("/").foldLeft(this) {
-      case (currentCursor, "..") => currentCursor.parent.getOrElse(throw new PathNotValidException(s"path $subPath not valid as a subpath of ${this.path}"))
+      case (currentCursor, "..") => currentCursor.parent.getOrElse(JsonCursor(JNothing))
       case (currentCursor, pathElem) => currentCursor.subCursor(currentCursor.json \ pathElem, pathElem)
     }
   }

@@ -12,5 +12,3 @@ case class TooManyMatchingCasesException(path: String, cases: List[(SchemaWithCl
 }.mkString("\n")}\n\ndata=${JsonMethods.pretty(json)}")
 
 case class SchemaNotFoundException(path: String, className: String) extends RuntimeException(s"Deserialization error at ${path}: schema not found for class ${className}")
-
-case class PathNotValidException(message: String) extends RuntimeException(message)
