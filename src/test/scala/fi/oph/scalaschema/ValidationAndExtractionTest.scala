@@ -258,6 +258,16 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
           verifyValidation[WrapperForTraitWithMultipleRestrictions](JObject("asdf" -> JInt(3), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
           verifyValidation[WrapperForTraitWithMultipleRestrictions](JObject("asdf" -> JInt(2), "field" -> JObject()), Right(WrapperForTraitWithMultipleRestrictions(Alt2(), 2)))
         }
+
+        "Allows null-checking by using None as value" in {
+          verifyValidation[TraitWithParentRestrictions](JObject("number" -> JInt(1)), Right(AltOnlyWhenParentMissing(1)))
+          val expectedError = NotAnyOf(Map(
+            "altonlywhenparentmissing" -> List("""..="""), // TODO: should say ..=null instead
+            "defaultalt" -> List("allowed properties [] do not contain [number]")
+          ))
+          verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject("number" -> JInt(1))), Left(List(ValidationError("thing", JObject("number" -> JInt(1)), expectedError))))
+          verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject()), Right(WrapperForTraitWithParentRestrictions(DefaultAlt())))
+        }
       }
     }
     "JValues" - {
@@ -364,3 +374,9 @@ case class Alt2() extends TraitWithMultipleRestrictions
 
 case class FieldOkIfParentMissing(@OnlyWhen("..", None) field: Option[String])
 case class WrapperForTraitOkIfParentMissing(thing: FieldOkIfParentMissing)
+
+trait TraitWithParentRestrictions
+@OnlyWhen("..", None)
+case class AltOnlyWhenParentMissing(number: Int) extends TraitWithParentRestrictions
+case class DefaultAlt() extends TraitWithParentRestrictions
+case class WrapperForTraitWithParentRestrictions(thing: TraitWithParentRestrictions)
