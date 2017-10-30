@@ -265,43 +265,15 @@ private object TraitImplementationFinder {
 }
 
 object Annotations {
+  import scala.tools.reflect.ToolBox
+  val tb = reflect.runtime.currentMirror.mkToolBox()
   def findAnnotations(symbol: ru.Symbol, annotationsSupported: List[Class[_ <: StaticAnnotation]]): List[StaticAnnotation] = {
     symbol.annotations.flatMap { annotation =>
       val annotationType: String = annotation.tree.tpe.toString
       annotationsSupported.find(_.getName == annotationType) map { annotationClass =>
-        val annotationParams: List[String] = annotation.tree.children.tail.map(str => StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", "")))
-        Annotations.parseAnnotation(annotationClass, annotationParams)
+        val evaluated = tb.eval(tb.untypecheck(annotation.tree))
+        evaluated.asInstanceOf[StaticAnnotation]
       }
     }
   }
-
-  private def parseAnnotation(annotationClass: Class[_ <: StaticAnnotation], params: List[String]): StaticAnnotation = {
-    val StringClass = classOf[String]
-    val DoubleClass = classOf[Double]
-    val IntegerClass = classOf[Int]
-    val BooleanClass = classOf[Boolean]
-
-    val constructor: Constructor[_] = annotationClass.getConstructors()(0)
-
-    def parseAnnotationParam(klass: Class[_], value: String): AnyRef = (klass, value) match {
-      case (StringClass, value) => value
-      case (DoubleClass, value) => new lang.Double(value.toDouble)
-      case (IntegerClass, value) => new lang.Integer(value.toDouble.toInt)
-      case (BooleanClass, value) => new lang.Boolean(value.toBoolean)
-      case (tyep, value) =>
-        Try(parseAnnotationParam(IntegerClass, value.toInt.toString))
-          .orElse(Try(parseAnnotationParam(DoubleClass, value.toDouble.toString)))
-          .orElse(Try(parseAnnotationParam(BooleanClass, value.toBoolean.toString)))
-          .getOrElse {
-            // Just try String
-            parseAnnotationParam(StringClass, value)
-          }
-    }
-
-    val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex
-      .map { case (klass, index) => parseAnnotationParam(klass, params(index))}
-
-    constructor.newInstance(constructorParams:_*).asInstanceOf[StaticAnnotation]
-  }
-
 }
