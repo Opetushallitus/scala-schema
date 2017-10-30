@@ -228,6 +228,10 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
           verifyValidation[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("asdf" -> JInt(3)), Right(WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(3, "hello")))
           verifyValidation[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("asdf" -> JInt(1), "field" -> JString("hello2")), Right(WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(1, "hello2")))
         }
+
+        "Allows a value matching @DefaultValue even when @OnlyWhen says it's not ok" in {
+          verifyExtractionRoundTrip[WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues](WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(3, "hello"))
+        }
       }
 
       "When applied to case classes" - {

@@ -1,7 +1,7 @@
 package fi.oph.scalaschema.extraction
 
 import fi.oph.scalaschema._
-import fi.oph.scalaschema.annotation.{OnlyWhen, SerializableOnlyWhen}
+import fi.oph.scalaschema.annotation.{DefaultValue, OnlyWhen, SerializableOnlyWhen}
 import org.json4s.JsonAST.JObject
 import org.json4s._
 
@@ -12,10 +12,10 @@ object ObjectExtractor {
         val propertyResults: List[Either[List[ValidationError], Any]] = cs.properties
           .filterNot(_.synthetic)
           .map { property =>
-            val jsonValue = o \ property.key
-            val subCursor = cursor.subCursor(jsonValue, property.key)
+            val fieldJsonValue = o \ property.key
+            val subCursor = cursor.subCursor(fieldJsonValue, property.key)
 
-            val valuePresent = jsonValue match {
+            val valuePresent = fieldJsonValue match {
               case JNothing => false
               case JNull => false
               case _ => true
@@ -33,7 +33,10 @@ object ObjectExtractor {
                 if (found.isDefined) {
                   None
                 } else {
-                  Some(OnlyWhenMismatch(onlyWhenAnnotations))
+                  DefaultValue.getDefaultValue[Any](property.metadata).map(AnyToJson.anyToJValue) match {
+                    case Some(v) if v == fieldJsonValue => None // Allow default value even when field is otherwise rejected
+                    case _ => Some(OnlyWhenMismatch(onlyWhenAnnotations))
+                  }
                 }
             }
 
@@ -41,7 +44,7 @@ object ObjectExtractor {
               case None =>
                 SchemaValidatingExtractor.extract(subCursor, property.schema, property.metadata)
               case Some(mismatch) =>
-                Left(List(ValidationError(subCursor.path, jsonValue, mismatch)))
+                Left(List(ValidationError(subCursor.path, fieldJsonValue, mismatch)))
             }
           }
         val unexpectedProperties = if (context.ignoreUnexpectedProperties) Nil else values
