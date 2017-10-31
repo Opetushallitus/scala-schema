@@ -235,7 +235,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
 
         "Allows null-checking by using None as value" in {
           verifyValidation[FieldOkIfParentMissing](JObject("field" -> JString("hello")), Right(FieldOkIfParentMissing(Some("hello"))))
-          verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Left(List(ValidationError("thing.field",JString("hello"),OnlyWhenMismatch(List(SerializableOnlyWhen("..",JNothing)))))))
+          verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Left(List(ValidationError("thing.field",JString("hello"),OnlyWhenMismatch(List(SerializableOnlyWhen("..",JNull)))))))
           verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject()), Right(WrapperForTraitOkIfParentMissing(FieldOkIfParentMissing(None))))
         }
       }
@@ -262,7 +262,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         "Allows null-checking by using None as value" in {
           verifyValidation[TraitWithParentRestrictions](JObject("number" -> JInt(1)), Right(AltOnlyWhenParentMissing(1)))
           val expectedError = NotAnyOf(Map(
-            "altonlywhenparentmissing" -> List("""..="""), // TODO: should say ..=null instead
+            "altonlywhenparentmissing" -> List("""..=null"""),
             "defaultalt" -> List("allowed properties [] do not contain [number]")
           ))
           verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject("number" -> JInt(1))), Left(List(ValidationError("thing", JObject("number" -> JInt(1)), expectedError))))

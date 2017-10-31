@@ -155,7 +155,7 @@ object AnyOfExtractor {
       val valueAtKeyPath = keyPath(json)
       val found = criteria.find { case SerializableOnlyWhen(path, value) =>
         val valueAtExpectedPosition = valueAtKeyPath.navigate(path).json
-        valueAtExpectedPosition == value
+        JsonCompare.equals(valueAtExpectedPosition, value)
       }
       found match {
         case Some(matching) => Nil

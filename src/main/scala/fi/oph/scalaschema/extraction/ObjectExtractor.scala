@@ -28,13 +28,13 @@ object ObjectExtractor {
               case _ =>
                 val found = onlyWhenAnnotations.find { case SerializableOnlyWhen(path, expectedValue) =>
                   val valueFromPath: JValue = cursor.navigate(path).json
-                  valueFromPath == expectedValue
+                  JsonCompare.equals(valueFromPath, expectedValue)
                 }
                 if (found.isDefined) {
                   None
                 } else {
-                  DefaultValue.getDefaultValue[Any](property.metadata).map(AnyToJson.anyToJValue) match {
-                    case Some(v) if v == fieldJsonValue => None // Allow default value even when field is otherwise rejected
+                  DefaultValue.getDefaultValue[Any](property.metadata).map(AnyToJson.anyToJValue) match { // TODO: don't apply AnyToJson to default values, do comparison after extraction instead
+                    case Some(v) if JsonCompare.equals(v, fieldJsonValue) => None // Allow default value even when field is otherwise rejected
                     case _ => Some(OnlyWhenMismatch(onlyWhenAnnotations))
                   }
                 }
