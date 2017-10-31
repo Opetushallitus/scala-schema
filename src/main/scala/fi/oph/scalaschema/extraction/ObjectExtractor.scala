@@ -12,16 +12,16 @@ object ObjectExtractor {
         val propertyResults: List[Either[List[ValidationError], Any]] = cs.properties
           .filterNot(_.synthetic)
           .map { property =>
-            val fieldJsonValue = o \ property.key
-            val subCursor = cursor.subCursor(fieldJsonValue, property.key)
-
-            val valuePresent = fieldJsonValue match {
+            val propertyValueCursor = cursor.subCursor(o \ property.key, property.key)
+            val valuePresent = propertyValueCursor.json match {
               case JNothing => false
               case JNull => false
               case _ => true
             }
 
             val onlyWhenAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case o:OnlyWhen if valuePresent => o.serializableForm }
+
+            val extractedPropertyValue = SchemaValidatingExtractor.extract(propertyValueCursor, property.schema, property.metadata)
 
             val onlyWhenMismatch: Option[OnlyWhenMismatch] = onlyWhenAnnotations match {
               case Nil => None
@@ -33,8 +33,8 @@ object ObjectExtractor {
                 if (found.isDefined) {
                   None
                 } else {
-                  DefaultValue.getDefaultValue[Any](property.metadata).map(AnyToJson.anyToJValue) match { // TODO: don't apply AnyToJson to default values, do comparison after extraction instead
-                    case Some(v) if JsonCompare.equals(v, fieldJsonValue) => None // Allow default value even when field is otherwise rejected
+                  DefaultValue.getDefaultValue[Any](property.metadata) match {
+                    case Some(v) if Right(v) == extractedPropertyValue => None // Allow default value even when field is otherwise rejected
                     case _ => Some(OnlyWhenMismatch(onlyWhenAnnotations))
                   }
                 }
@@ -42,9 +42,9 @@ object ObjectExtractor {
 
             onlyWhenMismatch match {
               case None =>
-                SchemaValidatingExtractor.extract(subCursor, property.schema, property.metadata)
+                extractedPropertyValue
               case Some(mismatch) =>
-                Left(List(ValidationError(subCursor.path, fieldJsonValue, mismatch)))
+                Left(List(ValidationError(propertyValueCursor.path, propertyValueCursor.json, mismatch)))
             }
           }
         val unexpectedProperties = if (context.ignoreUnexpectedProperties) Nil else values

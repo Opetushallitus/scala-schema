@@ -1,8 +1,8 @@
 package fi.oph.scalaschema.annotation
 
-import fi.oph.scalaschema.Metadata
-import fi.oph.scalaschema.extraction.AnyToJson
+import fi.oph.scalaschema.{Metadata, Serializer}
 import org.json4s.{JValue, JsonAST}
+import org.json4s.JsonAST.{JNull, JString}
 
 case class OnlyWhen(path: String, value: Any) extends Metadata {
   override def appendMetadataToJsonSchema(obj: JsonAST.JObject): JsonAST.JObject = appendToDescription(obj, s"(Only when $path = $value)")
@@ -10,3 +10,15 @@ case class OnlyWhen(path: String, value: Any) extends Metadata {
 }
 
 case class SerializableOnlyWhen(path: String, value: JValue)
+
+private object AnyToJson {
+  // Use sparingly! Only supports numbers, strings, booleans and Option
+  def anyToJValue(x: Any): JValue = x match {
+    case None => JNull
+    case Some(x) => anyToJValue(x)
+    case s: String => JString(s)
+    case n: Number => Serializer.serializeNumber(n)
+    case b: Boolean => Serializer.serializeBoolean(b)
+    case _ => throw new IllegalArgumentException("Type not supported here: " + x.getClass)
+  }
+}
