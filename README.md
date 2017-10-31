@@ -46,7 +46,7 @@ case class AnnotatedCat(
 )
 ```
 
-You can add support for your custom annotations too, if you wish. Like
+You can add your custom annotations too, if you wish. Like
 
 ```scala
 object ExampleWithCustomAnnotations extends App {
