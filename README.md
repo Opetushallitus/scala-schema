@@ -116,6 +116,8 @@ case class ValidationTestClass(name: String, stuff: List[Int])
 The `ExtractionContext` object created in the example above is used by the `scala-schema` extraction mechanism to cache
 some information to make subsequent extractions faster. Hence it makes sense to store this object in a variable.
 
+More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/ValidationAndExtractionTest.scala)
+
 ### Serialization
 
 Use your schema to serialize your Scala objects into JSON. This is more efficient than using then json4s serialization, because we're
@@ -144,7 +146,7 @@ object CustomSerializationExample extends App {
 }
 ```
 
-In the above example, all fields with the name "age" are hidden.
+In the above example, all fields with the name "age" are hidden. More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/SerializationSpec.scala).
 
 ### Schemas and Factories
 
