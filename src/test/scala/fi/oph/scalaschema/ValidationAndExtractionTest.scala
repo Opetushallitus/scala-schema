@@ -88,6 +88,7 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       verifyExtractionRoundTrip(dates)
 
       verifyValidation[Timestamp](JString("1970-01-01T00:00:00Z"), Right(new Timestamp(0)))
+      verifyValidation[Timestamp](JString("1970-01-01T00:00:00.0000Z"), Right(new Timestamp(0)))
     }
     "Numbers" - {
       "As case class fields" in {
