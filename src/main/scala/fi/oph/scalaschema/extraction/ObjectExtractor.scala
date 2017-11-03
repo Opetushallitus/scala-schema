@@ -54,7 +54,12 @@ object ObjectExtractor {
         val errors: List[ValidationError] = propertyResults.collect { case Left(errors) => errors }.flatten ++ unexpectedProperties
         errors match {
           case Nil =>
-            val constructor = Class.forName(cs.fullClassName).getConstructors.apply(0)
+            val klass = Class.forName(cs.fullClassName)
+            val constructors = klass.getConstructors
+            if (constructors.isEmpty) {
+              throw new RuntimeException(s"Cannot find constructor for $klass")
+            }
+            val constructor = constructors.apply(0)
             val constructorParams: List[Object] = propertyResults.map(_.right.get).asInstanceOf[List[Object]]
             try {
               Right(constructor.newInstance(constructorParams: _*).asInstanceOf[AnyRef])
