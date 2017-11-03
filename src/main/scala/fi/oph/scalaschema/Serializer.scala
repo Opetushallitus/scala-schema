@@ -1,7 +1,7 @@
 package fi.oph.scalaschema
 
 import java.time.format.DateTimeFormatter.ISO_INSTANT
-import java.time.{LocalDate, ZoneId, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
 import java.util.Date
 
 import fi.oph.scalaschema.SchemaPropertyProcessor.SchemaPropertyProcessor
@@ -93,6 +93,7 @@ object Serializer {
   private def serializeDate(s: DateSchema, x: Any): JValue = x match {
     case x: LocalDate => JString(x.toString)
     case x: DateTime => JString(ISODateTimeFormat.dateTimeNoMillis.print(x))
+    case x: LocalDateTime => JString(x.toString)
     case x: Date => JString(ISO_INSTANT.format(ZonedDateTime.ofInstant(x.toInstant, ZoneId.of("UTC"))))
     case x: ZonedDateTime => JString(x.toString)
     case _ => throw new RuntimeException("Not a date: " + x)

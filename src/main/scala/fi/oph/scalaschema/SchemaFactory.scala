@@ -3,7 +3,7 @@ package fi.oph.scalaschema
 import java.lang
 import java.lang.reflect.Constructor
 import java.sql.Timestamp
-import java.time.{LocalDate, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
 
 import fi.oph.scalaschema.Annotations.findAnnotations
@@ -90,6 +90,7 @@ case class SchemaFactory() {
     "java.util.Date" -> DateSchema(dateType = classOf[Date]),
     "java.sql.Timestamp" -> DateSchema(dateType = classOf[Timestamp]),
     "java.time.LocalDate" -> DateSchema(dateType = classOf[LocalDate]),
+    "java.time.LocalDateTime" -> DateSchema(dateType = classOf[LocalDateTime]),
     "java.time.ZonedDateTime" -> DateSchema(dateType = classOf[ZonedDateTime]),
     "java.lang.String" -> StringSchema(),
     "scala.Boolean" -> BooleanSchema(),

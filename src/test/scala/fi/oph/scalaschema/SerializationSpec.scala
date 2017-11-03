@@ -1,7 +1,7 @@
 package fi.oph.scalaschema
 
 import java.sql.Timestamp
-import java.time.{LocalDate, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
 
 import org.joda.time.format.ISODateTimeFormat
@@ -29,9 +29,10 @@ class SerializationSpec extends FreeSpec with Matchers {
       ZonedDateTime.parse("1987-01-23T00:33:23Z"),
       Date.from(java.time.ZonedDateTime.parse("1977-03-13T13:42:11Z").toInstant),
       Timestamp.from(java.time.ZonedDateTime.parse("2007-08-23T10:43:21Z").toInstant),
-      ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime("2017-09-13T12:43:21Z")
+      ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime("2017-09-13T12:43:21Z"),
+      LocalDateTime.parse("2017-09-13T12:43:21")
     )
-    testSerialization(dates, """{"a":"2015-12-30","b":"1987-01-23T00:33:23Z","c":"1977-03-13T13:42:11Z","d":"2007-08-23T10:43:21Z","e":"2017-09-13T12:43:21Z"}""")
+    testSerialization(dates, """{"a":"2015-12-30","b":"1987-01-23T00:33:23Z","c":"1977-03-13T13:42:11Z","d":"2007-08-23T10:43:21Z","e":"2017-09-13T12:43:21Z","f":"2017-09-13T12:43:21Z"}""")
   }
 
   "booleans" in {

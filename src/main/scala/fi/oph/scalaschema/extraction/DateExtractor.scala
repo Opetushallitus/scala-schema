@@ -2,7 +2,7 @@ package fi.oph.scalaschema.extraction
 
 import java.sql.Timestamp
 import java.time.format.DateTimeParseException
-import java.time.{LocalDate, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
 
 import fi.oph.scalaschema.{DateSchema, ExtractionContext, JsonCursor, Metadata}
@@ -24,6 +24,8 @@ object DateExtractor {
   private def parse(dateString: String, dateType: Class[_]) = {
     if (dateType == classOf[LocalDate]) {
       LocalDate.parse(dateString)
+    } else if (dateType == classOf[LocalDateTime]) {
+      LocalDateTime.parse(dateString)
     } else if (dateType == classOf[ZonedDateTime]) {
       ZonedDateTime.parse(dateString)
     } else if (dateType == classOf[Timestamp]) {

@@ -1,7 +1,7 @@
 package fi.oph.scalaschema
 
 import java.sql.Timestamp
-import java.time.{LocalDate, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
 
 import fi.oph.scalaschema.annotation._
@@ -17,7 +17,7 @@ case class StringsWithDefault(@DefaultValue("hello") field: String)
 case class NumbersWithDefault(@DefaultValue(1) field: Int)
 case class Numbers(a: Int, b: Long, c: Float, d: Double)
 case class Strings(s: String)
-case class Dates(a: LocalDate, b: ZonedDateTime, c: Date, d: Timestamp, e: DateTime)
+case class Dates(a: LocalDate, b: ZonedDateTime, c: Date, d: Timestamp, e: DateTime, f: LocalDateTime)
 case class Lists(things: List[Int])
 case class Objects(x: Strings)
 case class NestedDefinitions(x: Objects)
