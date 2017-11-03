@@ -9,7 +9,7 @@ sealed trait ValidationRuleViolation
 case class MissingProperty(@EnumValue("missingProperty") errorType: String = "missingProperty") extends ValidationRuleViolation
 case class UnexpectedProperty(@EnumValue("unexpectedProperty") errorType: String = "unexpectedProperty") extends ValidationRuleViolation
 case class UnexpectedType(expectedType: String, @EnumValue("unexpectedType") errorType: String = "unexpectedType") extends ValidationRuleViolation
-case class DateFormatMismatch(expectedFormat: String = "yyyy-MM-dd", @EnumValue("dateFormatMismatch") errorType: String = "dateFormatMismatch") extends ValidationRuleViolation
+case class DateFormatMismatch(expectedFormat: String, @EnumValue("dateFormatMismatch") errorType: String = "dateFormatMismatch") extends ValidationRuleViolation
 case class EmptyString(@EnumValue("emptyString") errorType: String = "emptyString") extends ValidationRuleViolation
 case class RegExMismatch(regex: String, @EnumValue("regularExpressionMismatch") errorType: String = "regularExpressionMismatch") extends ValidationRuleViolation
 case class EnumValueMismatch(allowedValues: List[JValue], @EnumValue("enumValueMismatch") errorType: String = "enumValueMismatch") extends ValidationRuleViolation

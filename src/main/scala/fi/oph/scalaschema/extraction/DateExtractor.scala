@@ -16,9 +16,9 @@ object DateExtractor {
       case JString(dateString) => try {
         Right(parse(dateString, ds.dateType))
       } catch {
-        case e: DateTimeParseException => Left(List(ValidationError(cursor.path, cursor.json, DateFormatMismatch())))
+        case e: DateTimeParseException => Left(List(ValidationError(cursor.path, cursor.json, DateFormatMismatch(expectedFormat(ds.dateType)))))
       }
-      case _ => Left(List(ValidationError(cursor.path, cursor.json, DateFormatMismatch())))
+      case _ => Left(List(ValidationError(cursor.path, cursor.json, DateFormatMismatch(expectedFormat(ds.dateType)))))
     }
 
   private def parse(dateString: String, dateType: Class[_]) = {
@@ -34,6 +34,13 @@ object DateExtractor {
       ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime(dateString)
     } else {
       throw new UnsupportedOperationException("Unrecognized Date type: " + dateType.getName)
+    }
+  }
+  private def expectedFormat(dateType: Class[_]) = {
+    if (dateType == classOf[LocalDate]) {
+      "yyyy-MM-dd"
+    } else {
+      "yyyy-MM-ddThh:mm:ssZ"
     }
   }
 }

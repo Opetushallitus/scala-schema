@@ -86,6 +86,8 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime("2017-09-13T12:43:21Z")
       )
       verifyExtractionRoundTrip(dates)
+
+      verifyValidation[Timestamp](JString("1970-01-01T00:00:00Z"), Right(new Timestamp(0)))
     }
     "Numbers" - {
       "As case class fields" in {
