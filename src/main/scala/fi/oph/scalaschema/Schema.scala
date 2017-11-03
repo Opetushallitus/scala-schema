@@ -161,30 +161,13 @@ case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil,
   def replaceMetadata(metadata: List[Metadata]) =
     copy(
       metadata = metadata,
-      schema = applyEnumValues(schema, metadata.collect({ case EnumValue(v) => v }))
+      schema = EnumValue.addEnumValues(schema, metadata.collect({ case EnumValue(v) => v }))
     )
 
   def title = metadata.flatMap {
     case Title(t) => Some(t)
     case _ => None
   }.headOption.getOrElse(key.split("(?=\\p{Lu})").map(_.toLowerCase).mkString(" ").replaceAll("_ ", "-").capitalize)
-
-  private def addEnumValues[T](enumValues: Option[List[T]], newEnumValues: List[Any]):Option[scala.List[T]] = {
-    (enumValues.toList.flatten ++ newEnumValues).distinct match {
-      case Nil => None
-      case values => Some(values.asInstanceOf[List[T]])
-    }
-  }
-
-  private def applyEnumValues(schema: Schema, newEnumValues: List[Any]): Schema = (schema, newEnumValues) match {
-    case (_, Nil) => schema
-    case (x: StringSchema, _) => x.copy(enumValues = addEnumValues[String](x.enumValues, newEnumValues))
-    case (x: BooleanSchema, _) => x.copy(enumValues = addEnumValues[Boolean](x.enumValues, newEnumValues))
-    case (x: NumberSchema, _) => x.copy(enumValues = addEnumValues[Number](x.enumValues, newEnumValues))
-    case (x: OptionalSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
-    case (x: ListSchema, _) => x.mapItems(elementSchema => applyEnumValues(elementSchema, newEnumValues).asInstanceOf[ElementSchema])
-    case _ => throw new UnsupportedOperationException("EnumValue not supported for " + schema)
-  }
 }
 
 case class AnySchema() extends SimpleSchema

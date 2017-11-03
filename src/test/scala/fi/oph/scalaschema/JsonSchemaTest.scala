@@ -4,6 +4,7 @@ import com.github.fge.jsonschema.core.report.ListReportProvider
 import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import fi.oph.scalaschema.TestHelpers.schemaOf
+import fi.oph.scalaschema.annotation.EnumValue
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
@@ -150,6 +151,10 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       "@EnumValue" - {
         "for strings and optional strings" in {
           jsonSchemaOf(classOf[WithEnumValue]) should equal("""{"type":"object","properties":{"a":{"type":"string","enum":["a"],"minLength":1},"b":{"type":"string","enum":["b"],"minLength":1},"c":{"type":"array","items":{"type":"string","enum":["c"],"minLength":1}}},"id":"#withenumvalue","additionalProperties":false,"title":"With enum value","required":["a","c"]}""")
+        }
+
+        "fails with wrong type" in {
+          intercept[ClassCastException](EnumValue.addEnumValues(StringSchema(), List(true)))
         }
       }
 
