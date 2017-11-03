@@ -41,6 +41,8 @@ object DateExtractor {
   private def expectedFormat(dateType: Class[_]) = {
     if (dateType == classOf[LocalDate]) {
       "yyyy-MM-dd"
+    } else if (dateType == classOf[LocalDateTime]) {
+      "yyyy-MM-ddThh:mm:ss"
     } else {
       "yyyy-MM-ddThh:mm:ssZ"
     }
