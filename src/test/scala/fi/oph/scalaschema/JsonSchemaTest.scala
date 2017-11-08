@@ -56,7 +56,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         jsonSchemaPropertiesOf(classOf[Strings]) should equal("""{"s":{"type":"string","minLength":1}}""")
       }
       "Dates" in {
-        jsonSchemaPropertiesOf(classOf[Dates]) should equal("""{"a":{"type":"string","format":"date"},"b":{"type":"string","format":"date"},"c":{"type":"string","format":"date"},"d":{"type":"string","format":"date"},"e":{"type":"string","format":"date"}}""")
+        jsonSchemaPropertiesOf(classOf[Dates]) should equal("""{"a":{"type":"string","format":"date"},"b":{"type":"string","format":"date"},"c":{"type":"string","format":"date"},"d":{"type":"string","format":"date"},"e":{"type":"string","format":"date"},"f":{"type":"string","format":"date"}}""")
       }
     }
     "Lists" in {

@@ -32,7 +32,7 @@ class SerializationSpec extends FreeSpec with Matchers {
       ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime("2017-09-13T12:43:21Z"),
       LocalDateTime.parse("2017-09-13T12:43:21")
     )
-    testSerialization(dates, """{"a":"2015-12-30","b":"1987-01-23T00:33:23Z","c":"1977-03-13T13:42:11Z","d":"2007-08-23T10:43:21Z","e":"2017-09-13T12:43:21Z","f":"2017-09-13T12:43:21Z"}""")
+    testSerialization(dates, """{"a":"2015-12-30","b":"1987-01-23T00:33:23Z","c":"1977-03-13T13:42:11Z","d":"2007-08-23T10:43:21Z","e":"2017-09-13T12:43:21Z","f":"2017-09-13T12:43:21"}""")
   }
 
   "booleans" in {
