@@ -99,3 +99,9 @@ trait WithEnumerableFieldsAB {
 }
 case class WithEnumValue(@EnumValue("a") a: String, b: Option[String], @EnumValue("c") c: List[String]) extends WithEnumerableFieldsAB
 case class WithJValue(x: JValue)
+
+@Flatten
+case class Flattened(value: Int)
+
+@Flatten
+case class Flattened2Fields(a: Int, b: Int)

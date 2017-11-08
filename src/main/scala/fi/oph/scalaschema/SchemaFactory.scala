@@ -72,11 +72,27 @@ case class SchemaFactory() {
     } else {
       schemaTypeForScala.getOrElse(typeName, {
         if (tpe.typeSymbol.isClass) {
-          createClassOrTraitSchema(tpe, state)
+          findFlattenAnnotation(tpe.typeSymbol) match {
+            case None =>
+              createClassOrTraitSchema(tpe, state)
+            case Some(f) =>
+              createFlattenedSchema(tpe, state)
+          }
         } else {
           throw new RuntimeException("Unsupported type: " + tpe)
         }
       })
+    }
+  }
+
+  private def findFlattenAnnotation(symbol: ru.Symbol) = {
+    val checkIfFlatten = { symbol: ru.Symbol =>
+      symbol.fullName == classOf[Flatten].getName
+    }
+    findAnnotations(symbol, checkIfFlatten).asInstanceOf[List[Flatten]] match {
+      case List(flatten) => Some(flatten)
+      case Nil => None
+      case _ => throw new RuntimeException(s"Multiple @Flatten annotations found for $symbol")
     }
   }
 
@@ -136,6 +152,21 @@ case class SchemaFactory() {
 
     } else {
       createClassRefSchema(tpe)
+    }
+  }
+
+  private def createFlattenedSchema(tpe: ru.Type, state: ScanState) = {
+    if (tpe.typeSymbol.isAbstract) throw new RuntimeException(s"@Flatten annotation on abstract class or trait $tpe")
+    val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
+    constructorParams match {
+      case List(param) =>
+        val className: String = tpe.typeSymbol.fullName
+        val fieldName: String = param.name.decoded.trim
+        val wrappedSchema = createSchema(param.typeSignature, state.childState)
+        FlattenedSchema(className, fieldName, wrappedSchema)
+
+      case Nil => throw new RuntimeException(s"@Flatten annotation on a case class with zero fields: $tpe")
+      case _ => throw new RuntimeException(s"@Flatten annotation on a case class with more than one field: $tpe")
     }
   }
 
@@ -203,10 +234,14 @@ case class SchemaFactory() {
     })
 
   private def applyMetadataAnnotations[T <: ObjectWithMetadata[T]](symbol: ru.Symbol, x: T): T = {
-    val checkIfMetadataAnnotation = { symbol: ru.Symbol => symbol.asClass.baseClasses.contains(ru.typeOf[Metadata].typeSymbol) }
-    findAnnotations(symbol, checkIfMetadataAnnotation).asInstanceOf[List[Metadata]].foldLeft(x) {
+    findMetadataAnnotations(symbol).foldLeft(x) {
       case (current, metadata) => metadata.applyMetadata(current, this).asInstanceOf[T]
     }
+  }
+
+  private def findMetadataAnnotations(symbol: ru.Symbol) = {
+    val checkIfMetadataAnnotation = { symbol: ru.Symbol => symbol.asClass.baseClasses.contains(ru.typeOf[Metadata].typeSymbol) }
+    findAnnotations(symbol, checkIfMetadataAnnotation).asInstanceOf[List[Metadata]]
   }
 
   private def isListType(tpe: ru.Type): Boolean = {

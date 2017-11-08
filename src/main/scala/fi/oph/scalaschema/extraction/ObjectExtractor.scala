@@ -6,6 +6,11 @@ import org.json4s.JsonAST.JObject
 import org.json4s._
 
 object ObjectExtractor {
+  def extractFlattenedObject(cursor: JsonCursor, fs: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
+    val extractedValue: Either[List[ValidationError], Any] = SchemaValidatingExtractor.extract(cursor, fs.itemSchema, metadata)
+    extractedValue.right.map( value => instantiateCaseClass(cursor.path, fs.fullClassName, List(value)) )
+  }
+
   def extractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
     cursor.json match {
       case o@JObject(values) =>
@@ -54,22 +59,26 @@ object ObjectExtractor {
         val errors: List[ValidationError] = propertyResults.collect { case Left(errors) => errors }.flatten ++ unexpectedProperties
         errors match {
           case Nil =>
-            val klass = Class.forName(cs.fullClassName)
-            val constructors = klass.getConstructors
-            if (constructors.isEmpty) {
-              throw new RuntimeException(s"Cannot find constructor for $klass")
-            }
-            val constructor = constructors.apply(0)
-            val constructorParams: List[Object] = propertyResults.map(_.right.get).asInstanceOf[List[Object]]
-            try {
-              Right(constructor.newInstance(constructorParams: _*).asInstanceOf[AnyRef])
-            } catch {
-              case e: Exception => throw new DeserializationException(cursor.path, s"instantiating ${cs.fullClassName} with ${constructorParams}", e)
-            }
-
-          case _ => Left(errors)
+            Right(instantiateCaseClass(cursor.path, cs.fullClassName, propertyResults.map(_.right.get)))
+          case _ =>
+            Left(errors)
         }
       case json => Left(List(ValidationError(cursor.path, json, UnexpectedType("object"))))
+    }
+  }
+
+  private def instantiateCaseClass(path: String, className: String, params: List[Any]) = {
+    val klass = Class.forName(className)
+    val constructors = klass.getConstructors
+    if (constructors.isEmpty) {
+      throw new RuntimeException(s"Cannot find constructor for $klass")
+    }
+    val constructor = constructors.apply(0)
+    val constructorParams: List[Object] = params.asInstanceOf[List[Object]]
+    try {
+      constructor.newInstance(constructorParams: _*).asInstanceOf[AnyRef]
+    } catch {
+      case e: Exception => throw new DeserializationException(path, s"instantiating ${className} with ${constructorParams}", e)
     }
   }
 }

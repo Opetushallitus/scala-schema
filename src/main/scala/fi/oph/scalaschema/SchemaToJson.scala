@@ -42,6 +42,7 @@ object SchemaToJson {
     case AnyOfSchema(alternatives, _, _, definitions) => JObject(
       List("anyOf" -> JArray(alternatives.map(toJsonSchemaWithoutMetadata(_)))) ++ toDefinitionProperty(definitions).toList
     )
+    case FlattenedSchema(className, fieldName, wrappedSchema) => toJsonSchemaWithoutMetadata(wrappedSchema)
     case AnySchema() => JObject()
     case AnyObjectSchema() => JObject("type" -> JString("object"))
     case AnyListSchema() => JObject("type" -> JString("array"))

@@ -158,6 +158,15 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         }
       }
 
+      "@Flatten" - {
+        "flattens the schema of a single-field case class" in {
+          jsonSchemaOf[Flattened] should equal("""{"type":"number"}""")
+        }
+        "fails when case class has more than 1 field" in {
+          intercept[RuntimeException](jsonSchemaOf[Flattened2Fields])
+        }
+      }
+
       "Custom metadata annotations" in {
         jsonSchemaOf(SchemaFactory.default.createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
       }

@@ -49,6 +49,7 @@ sealed trait ElementSchema extends Schema {
   def mapItems(f: ElementSchema => ElementSchema): Schema = f(this)
   def collectDefinitions: (Schema, List[SchemaWithClassName]) = (this, Nil)
 }
+
 sealed trait SimpleSchema extends ElementSchema {
   override def getSchema(className: String): Option[SchemaWithClassName] = None
 }
@@ -109,6 +110,16 @@ case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: S
     alternatives.find { classType =>
       classType.fullClassName == obj.getClass.getName
     }
+  }
+}
+case class FlattenedSchema(fullClassName: String, fieldName: String, itemSchema: Schema) extends SchemaWithClassName with ElementSchema {
+  override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
+    val (newItemSchema, defs) = itemSchema.collectDefinitions
+    (this.copy(itemSchema = newItemSchema), defs)
+  }
+
+  def getValue(target: AnyRef): AnyRef = {
+    target.getClass.getMethod(fieldName).invoke(target)
   }
 }
 

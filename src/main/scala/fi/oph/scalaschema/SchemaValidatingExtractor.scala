@@ -45,6 +45,7 @@ object SchemaValidatingExtractor {
         case ls: ListSchema => ListExtractor.extractList(cursor, ls, metadata)
         case ms: MapSchema => MapExtractor.extractMap(cursor, ms, metadata)
         case ds: DateSchema => DateExtractor.extractDate(cursor, ds, metadata)
+        case fs: FlattenedSchema => ObjectExtractor.extractFlattenedObject(cursor, fs, metadata)
         case cs: SchemaWithClassName =>
           cursor.json match {
             case _: JObject =>

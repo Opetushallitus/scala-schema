@@ -90,10 +90,13 @@ class SerializationSpec extends FreeSpec with Matchers {
     }
   }
 
-
   "custom field filtering" in {
     def skipOtherThanA(s: ClassSchema, p: Property) = if (p.key == "a") List(p) else Nil
     testSerialization(Numbers(1, 1l, 0.4f, 1.1), """{"a":1}""", context = SerializationContext(SchemaFactory.default, propertyProcessor = skipOtherThanA))
+  }
+
+  "@Flatten annotation" in {
+    testSerialization(Flattened(1), """1""")
   }
 
   def testSerialization[T](x: T, expected: String, context: SerializationContext = defaultContext)(implicit tag: ru.TypeTag[T]) = {
