@@ -1,5 +1,7 @@
 ## scala-schema
 
+[![Build Status](https://travis-ci.org/Opetushallitus/scala-schema.svg?branch=scala-2.12)](https://travis-ci.org/Opetushallitus/scala-schema)
+
 Generate a [JSON schema](http://json-schema.org/) from Scala classes 
 
 - Create a Schema object from any `case class`
