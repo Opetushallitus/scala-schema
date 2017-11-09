@@ -47,16 +47,11 @@ object SchemaValidatingExtractor {
         case ds: DateSchema => DateExtractor.extractDate(cursor, ds, metadata)
         case fs: FlattenedSchema => ObjectExtractor.extractFlattenedObject(cursor, fs, metadata)
         case cs: SchemaWithClassName =>
-          cursor.json match {
-            case _: JObject =>
-              (context.customSerializerFor(cs), cs) match {
-                case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(cursor, cs, metadata)
-                case (_, cs: ClassRefSchema) => extract(cursor, SchemaResolver.resolveSchema(cs, cursor.path), metadata)
-                case (_, cs: ClassSchema) => ObjectExtractor.extractObject(cursor, cs, metadata)
-                case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(cursor, as, metadata)
-              }
-            case _ =>
-              Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("object"))))
+          (context.customSerializerFor(cs), cs) match {
+            case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(cursor, cs, metadata)
+            case (_, cs: ClassRefSchema) => extract(cursor, SchemaResolver.resolveSchema(cs, cursor.path), metadata)
+            case (_, cs: ClassSchema) => ObjectExtractor.extractObject(cursor, cs, metadata)
+            case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(cursor, as, metadata)
           }
         case _ => throw new RuntimeException(s"Unexpected schema type ${schema}")
       }}

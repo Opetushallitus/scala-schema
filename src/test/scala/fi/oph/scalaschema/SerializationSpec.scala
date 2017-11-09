@@ -96,7 +96,7 @@ class SerializationSpec extends FreeSpec with Matchers {
   }
 
   "@Flatten annotation" in {
-    testSerialization(Flattened(1), """1""")
+    testSerialization(FlattenedNumber(1), """1""")
   }
 
   def testSerialization[T](x: T, expected: String, context: SerializationContext = defaultContext)(implicit tag: ru.TypeTag[T]) = {

@@ -100,8 +100,20 @@ trait WithEnumerableFieldsAB {
 case class WithEnumValue(@EnumValue("a") a: String, b: Option[String], @EnumValue("c") c: List[String]) extends WithEnumerableFieldsAB
 case class WithJValue(x: JValue)
 
+trait MaybeFlattened
 @Flatten
-case class Flattened(value: Int)
+case class FlattenedNumber(value: Int) extends MaybeFlattened
+@Flatten
+case class FlattenedString(value: String) extends MaybeFlattened
+@Flatten
+case class FlattenedDate(value: LocalDate) extends MaybeFlattened
+@Flatten
+case class FlattenedBoolean(value: Boolean) extends MaybeFlattened
+@Flatten
+case class FlattenedObject(value: RequiredFields) extends MaybeFlattened
+@Flatten
+case class FlattenedList(values: List[Int]) extends MaybeFlattened
+case class WithMoreData(value: Int, description: String) extends MaybeFlattened
 
 @Flatten
 case class Flattened2Fields(a: Int, b: Int)

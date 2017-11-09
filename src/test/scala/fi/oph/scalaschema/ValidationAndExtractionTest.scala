@@ -181,8 +181,18 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         verifyValidation[WithEnumValue](JObject("a" -> JString("a"), "c" -> JArray(List(JString("b")))), Left(List(ValidationError("c.0", JString("b"), EnumValueMismatch(List(JString("c")))))))
       }
     }
-    "@Flatten annotation" in {
-      verifyExtractionRoundTrip(Flattened(1))
+    "@Flatten annotation" - {
+      "simple case" in {
+        verifyExtractionRoundTrip(FlattenedNumber(1))
+      }
+      "when used as a trait implementation option" in {
+        verifyExtractionRoundTrip[MaybeFlattened](FlattenedNumber(1))
+        verifyExtractionRoundTrip[MaybeFlattened](FlattenedBoolean(true))
+        verifyExtractionRoundTrip[MaybeFlattened](FlattenedString("hello"))
+        verifyExtractionRoundTrip[MaybeFlattened](FlattenedDate(LocalDate.now))
+        verifyExtractionRoundTrip[MaybeFlattened](FlattenedList(List(1)))
+        verifyExtractionRoundTrip[MaybeFlattened](WithMoreData(1, "yes"))
+      }
     }
     "Synthetic properties" - {
       "Are ignored" in {

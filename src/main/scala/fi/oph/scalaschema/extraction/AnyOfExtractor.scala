@@ -1,6 +1,6 @@
 package fi.oph.scalaschema.extraction
 
-import fi.oph.scalaschema.annotation.{Discriminator, IgnoreInAnyOfDeserialization, OnlyWhen, SerializableOnlyWhen}
+import fi.oph.scalaschema.annotation._
 import fi.oph.scalaschema.{Schema, _}
 import org.json4s.JsonAST.JObject
 import org.json4s._
@@ -43,7 +43,7 @@ object AnyOfExtractor {
     schema.metadata.contains(IgnoreInAnyOfDeserialization())
   }
 
-  private def discriminatorCriteria(contextPath: String, schema: SchemaWithClassName, keyPath: KeyPath)(implicit context: ExtractionContext, rootSchema: Schema): CriteriaCollection = schema match {
+  private def discriminatorCriteria(contextPath: String, schema: Schema, keyPath: KeyPath)(implicit context: ExtractionContext, rootSchema: Schema): CriteriaCollection = schema match {
     case s: ClassRefSchema =>
       discriminatorCriteria(contextPath, SchemaResolver.resolveSchema(s, contextPath), keyPath)
     case s: ClassSchema =>
@@ -63,7 +63,12 @@ object AnyOfExtractor {
       }
 
       CriteriaCollection(criteria ++ onlyWhens)
-
+    case s: FlattenedSchema => CriteriaCollection(List(Flattened(keyPath, s, discriminatorCriteria(contextPath, s.itemSchema, keyPath))))
+    case s: NumberSchema => CriteriaCollection(List(IsNumeric(keyPath, s)))
+    case s: StringSchema => CriteriaCollection(List(IsString(keyPath, s)))
+    case s: BooleanSchema => CriteriaCollection(List(IsBoolean(keyPath, s)))
+    case s: DateSchema => CriteriaCollection(List(IsDate(keyPath, s)))
+    case s: ListSchema => CriteriaCollection(List(IsArray(keyPath, s)))
     case _ => throw new RuntimeException(s"Only ClassSchema, ClassRefSchema supported as alternatives in AnyOfSchema (found ${schema})")
   }
 
@@ -72,8 +77,8 @@ object AnyOfExtractor {
     property.schema match {
       case s: OptionalSchema if !property.metadata.contains(Discriminator()) => Nil // Optional attribute are required only when marked with @Discriminator
       case OptionalSchema(s) => propertyMatchers(contextPath, keyPath, property.copy(schema = s)) // OptionalSchema with Discriminator => dig deeper
-      case s: StringSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
-      case s: NumberSchema if s.enumValues.isDefined =>  List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
+      case s: StringSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
+      case s: NumberSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: BooleanSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: ClassRefSchema => propertyMatchers(contextPath, keyPath, property.copy(schema = SchemaResolver.resolveSchema(s, contextPath)))
       case s: ClassSchema =>
@@ -116,6 +121,15 @@ object AnyOfExtractor {
     lazy val weight = criteria.map(_.weight).sum
     def apply(json: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = criteria.flatMap(c => c.apply(json))
     def matches(json: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema) = apply(json).isEmpty
+    def description = criteria.map(_.description).mkString(" and ")
+  }
+
+  case class Flattened(val keyPath: KeyPath, schema: FlattenedSchema, wrappedSchemaCriteria: CriteriaCollection) extends DiscriminatorCriterion {
+    override def description: String = wrappedSchemaCriteria.description
+
+    override def weight: Int = wrappedSchemaCriteria.weight
+
+    def apply(json: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = wrappedSchemaCriteria.apply(json)
   }
 
   case class PropertyExists(val keyPath: KeyPath) extends DiscriminatorCriterion {
@@ -125,6 +139,40 @@ object AnyOfExtractor {
     }
     def description = "exists"
     def weight = 100
+  }
+
+  abstract class TypeMatcher(val description: String) extends DiscriminatorCriterion {
+    override def apply(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): List[String] = matchType(value) match {
+      case true => Nil
+      case _ => List(description)
+    }
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): Boolean
+    def weight = 100
+  }
+
+  case class IsNumeric(val keyPath: KeyPath, schema: NumberSchema) extends TypeMatcher("numeric") {
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): Boolean = NumberExtractor.extractExisting(value, schema, Nil).isRight
+  }
+
+  case class IsString(val keyPath: KeyPath, schema: StringSchema) extends TypeMatcher("string") {
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): Boolean = StringExtractor.extractExisting(value, schema, Nil)isRight
+
+    override def weight = super.weight - 1 // prefer the more specific matchers
+  }
+
+  case class IsBoolean(val keyPath: KeyPath, schema: BooleanSchema) extends TypeMatcher("boolean") {
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): Boolean = BooleanExtractor.extractExisting(value, schema, Nil).isRight
+  }
+
+  case class IsDate(val keyPath: KeyPath, schema: DateSchema) extends TypeMatcher("date") {
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): Boolean = DateExtractor.extractDate(value, schema, Nil).isRight
+  }
+
+  case class IsArray(val keyPath: KeyPath, schema: ListSchema) extends TypeMatcher("array") {
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext, rootSchema: Schema): Boolean = value.json match {
+      case arr: JArray => true
+      case _ => false
+    }
   }
 
   case class PropertyEnumValues(val keyPath: KeyPath, schema: Schema, enumValues: List[Any]) extends DiscriminatorCriterion {
