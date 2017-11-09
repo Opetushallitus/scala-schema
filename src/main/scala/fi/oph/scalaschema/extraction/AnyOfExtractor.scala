@@ -45,7 +45,7 @@ object AnyOfExtractor {
 
   private def discriminatorCriteria(contextPath: String, schema: Schema, keyPath: KeyPath)(implicit context: ExtractionContext, rootSchema: Schema): DiscriminatorCriterion = schema match {
     case s: ClassRefSchema =>
-      discriminatorCriteria(contextPath, SchemaResolver.resolveSchema(s, contextPath), keyPath)
+      discriminatorCriteria(contextPath, s.resolve(context.schemaFactory), keyPath)
     case s: ClassSchema =>
       val discriminatorProps: List[Property] = s.properties.filter(_.metadata.contains(Discriminator()))
 
@@ -81,7 +81,7 @@ object AnyOfExtractor {
       case s: StringSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: NumberSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: BooleanSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
-      case s: ClassRefSchema => propertyMatchers(contextPath, keyPath, property.copy(schema = SchemaResolver.resolveSchema(s, contextPath)))
+      case s: ClassRefSchema => propertyMatchers(contextPath, keyPath, property.copy(schema = s.resolve(context.schemaFactory)))
       case s: ClassSchema =>
         List(PropertyExists(propertyPath)) ++ s.properties.flatMap { nestedProperty =>
           discriminatorCriteria(JsonCursor.subPath(contextPath, nestedProperty.key), s, propertyPath) match {

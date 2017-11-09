@@ -50,7 +50,7 @@ object SchemaValidatingExtractor {
         case cs: SchemaWithClassName =>
           (context.customSerializerFor(cs), cs) match {
             case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(cursor, cs, metadata)
-            case (_, cs: ClassRefSchema) => extract(cursor, SchemaResolver.resolveSchema(cs, cursor.path), metadata)
+            case (_, cs: ClassRefSchema) => extract(cursor, cs.resolve(context.schemaFactory), metadata)
             case (_, cs: ClassSchema) => ObjectExtractor.extractObject(cursor, cs, metadata)
             case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(cursor, as, metadata)
           }

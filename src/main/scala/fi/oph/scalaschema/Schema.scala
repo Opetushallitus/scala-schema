@@ -9,7 +9,6 @@ sealed trait Schema {
   def toJson: JValue = SchemaToJson.toJsonSchema(this)
   // Returns this schema with definitions removed, plus list of definitions removed
   def collectDefinitions: (Schema, List[SchemaWithClassName])
-  def getSchema(className: String): Option[SchemaWithClassName]
 }
 
 case class OptionalSchema(itemSchema: Schema) extends Schema {
@@ -19,8 +18,6 @@ case class OptionalSchema(itemSchema: Schema) extends Schema {
     val (itemSchema, defs) = this.itemSchema.collectDefinitions
     (OptionalSchema(itemSchema), defs)
   }
-
-  override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
 }
 
 case class ListSchema(itemSchema: Schema) extends Schema {
@@ -30,7 +27,6 @@ case class ListSchema(itemSchema: Schema) extends Schema {
     val (itemSchema, defs) = this.itemSchema.collectDefinitions
     (ListSchema(itemSchema), defs)
   }
-  override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
 }
 
 // for Map[String, _]
@@ -41,7 +37,6 @@ case class MapSchema(itemSchema: Schema) extends Schema {
     val (itemSchema, defs) = this.itemSchema.collectDefinitions
     (MapSchema(itemSchema), defs)
   }
-  override def getSchema(className: String): Option[SchemaWithClassName] = itemSchema.getSchema(className)
 }
 
 // Marker trait for schemas of actual elements (not optional/list wrappers)
@@ -50,9 +45,7 @@ sealed trait ElementSchema extends Schema {
   def collectDefinitions: (Schema, List[SchemaWithClassName]) = (this, Nil)
 }
 
-sealed trait SimpleSchema extends ElementSchema {
-  override def getSchema(className: String): Option[SchemaWithClassName] = None
-}
+sealed trait SimpleSchema extends ElementSchema
 case class DateSchema(dateType: Class[_]) extends SimpleSchema
 case class StringSchema(enumValues: Option[List[String]] = None) extends SimpleSchema
 case class BooleanSchema(enumValues: Option[List[Boolean]] = None) extends SimpleSchema
@@ -89,7 +82,7 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
 
 case class ClassRefSchema(fullClassName: String, override val metadata: List[Metadata]) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
-  override def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
+  def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
 }
 case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
   if (alternatives.isEmpty) throw new RuntimeException("AnyOfSchema needs at least one alternative")
@@ -172,8 +165,6 @@ sealed trait SchemaWithClassName extends Schema {
     None
   }
   
-  def resolve(factory: SchemaFactory): SchemaWithClassName = this
-
   private def simpleClassName = {
     fullClassName.split("\\.").toList.last
   }

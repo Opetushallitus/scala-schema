@@ -30,7 +30,7 @@ object Serializer {
     schema match {
       case s: ClassSchema => serializeObject(s, x)
       case s: ClassRefSchema =>
-        val actualSchema = rootSchema.getSchema(s.fullClassName).getOrElse(throw new SchemaNotFoundException("", s.fullClassName))
+        val actualSchema = context.schemaFactory.createSchema(s.fullClassName)
         serializeWithSchema(x, actualSchema)
       case s: AnyOfSchema =>
         s.findAlternative(x) match {
