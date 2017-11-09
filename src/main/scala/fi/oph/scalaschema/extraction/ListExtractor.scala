@@ -6,7 +6,7 @@ import org.json4s.JsonAST.JArray
 import org.json4s._
 
 object ListExtractor {
-  def extractList(cursor: JsonCursor, ls: ListSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = cursor.json match {
+  def extractList(cursor: JsonCursor, ls: ListSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = cursor.json match {
     case a@JArray(values) =>
       val valueResults: List[Either[List[ValidationError], Any]] = values.zipWithIndex.map {
         case (itemJson, index) =>

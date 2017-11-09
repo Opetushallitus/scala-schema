@@ -26,7 +26,7 @@ object SchemaValidatingExtractor {
     extract(JsonCursor(json), schema, metadata)
   }
 
-  def extract(cursor: JsonCursor, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
+  def extract(cursor: JsonCursor, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
     schema match {
       case os: OptionalSchema => OptionalExtractor.extractOptional(cursor, os, metadata)
       case ss: StringSchema => StringExtractor.extract(cursor, ss, metadata)

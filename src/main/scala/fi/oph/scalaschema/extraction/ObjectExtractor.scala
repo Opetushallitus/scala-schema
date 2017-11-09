@@ -6,18 +6,18 @@ import org.json4s.JsonAST.JObject
 import org.json4s._
 
 object ObjectExtractor {
-  def extractFlattenedObject(cursor: JsonCursor, s: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
+  def extractFlattenedObject(cursor: JsonCursor, s: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     SchemaValidatingExtractor.extract(cursor, s.property.schema, metadata).right.map { extractedValue =>
       val constructorParams = s.classSchema.properties.filterNot(_.synthetic).map { p => if (p == s.property) extractedValue else None }
       instantiateCaseClass(cursor.path, s.fullClassName, constructorParams)
     }
   }
 
-  def extractMaybeFlattenedObject(cursor: JsonCursor, s: ReadFlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
+  def extractMaybeFlattenedObject(cursor: JsonCursor, s: ReadFlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
     AnyOfExtractor.extractAnyOf(cursor, s.asAnyOfSchema, metadata)
   }
 
-  def extractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
+  def extractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     cursor.json match {
       case o@JObject(values) =>
         val propertyResults: List[Either[List[ValidationError], Any]] = cs.properties

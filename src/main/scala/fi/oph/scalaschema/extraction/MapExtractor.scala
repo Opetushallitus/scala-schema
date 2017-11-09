@@ -5,7 +5,7 @@ import org.json4s.JValue
 import org.json4s.JsonAST.{JField, JObject}
 
 object MapExtractor {
-  def extractMap(cursor: JsonCursor, ms: MapSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = cursor.json match {
+  def extractMap(cursor: JsonCursor, ms: MapSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = cursor.json match {
     case o@JObject(fields) =>
       val valueResults: List[Either[List[ValidationError], (String, Any)]] = fields.map {
         case JField(key, valueJson) =>
