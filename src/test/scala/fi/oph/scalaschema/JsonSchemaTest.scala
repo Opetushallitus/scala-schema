@@ -170,7 +170,7 @@ class JsonSchemaTest extends FreeSpec with Matchers {
 
       "@ReadFlattened" - {
         "Creates an AnyOf schema that allows a flat version" in {
-          jsonSchemaOf[ReadableFromString] should equal("""{"anyOf":[{"type":"object","properties":{"value":{"type":"string","minLength":1},"description":{"type":"string","minLength":1}},"id":"#readablefromstring","additionalProperties":false,"title":"Readable from string","required":["value"]},{"type":"string","minLength":1}]}""")
+          jsonSchemaOf[ReadableFromString] should equal("""{"anyOf":[{"type":"object","properties":{"value":{"type":"string","enum":["hello"],"minLength":1},"description":{"type":"string","minLength":1}},"id":"#readablefromstring","additionalProperties":false,"title":"Readable from string","required":["value"]},{"type":"string","enum":["hello"],"minLength":1}]}""")
         }
         "fails when case class has more than 1 required field" in {
           intercept[RuntimeException](jsonSchemaOf[ReadableFromTwoStrings])

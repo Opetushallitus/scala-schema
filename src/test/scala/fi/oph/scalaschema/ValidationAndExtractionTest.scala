@@ -198,12 +198,13 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       "simple case" in {
         verifyValidation[ReadableFromString](JObject(List("value" -> JString("hello"))), Right(ReadableFromString("hello", None)))
         verifyValidation[ReadableFromString](JString("hello"), Right(ReadableFromString("hello", None)))
-        verifyExtractionRoundTrip(ReadableFromString("value", None))
-        verifyExtractionRoundTrip(ReadableFromString("value", Some("description")))
+        verifyValidation[ReadableFromString](JString("wat"), Left(List(ValidationError("", JString("wat"), EnumValueMismatch(List(JString("hello")))))))
+        verifyExtractionRoundTrip(ReadableFromString("hello", None))
+        verifyExtractionRoundTrip(ReadableFromString("hello", Some("description")))
       }
       "when used as a trait implementation option" in {
-        verifyExtractionRoundTrip[MaybeReadableFromString](ReadableFromString("value", None))
-        verifyExtractionRoundTrip[MaybeReadableFromString](ReadableFromString("value", Some("description")))
+        verifyExtractionRoundTrip[MaybeReadableFromString](ReadableFromString("hello", None))
+        verifyExtractionRoundTrip[MaybeReadableFromString](ReadableFromString("hello", Some("description")))
         verifyExtractionRoundTrip[MaybeReadableFromString](OtherCase(0))
       }
     }

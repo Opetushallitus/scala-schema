@@ -163,17 +163,17 @@ object AnyOfExtractor {
   }
 
   case class IsNumeric(val keyPath: KeyPath, schema: NumberSchema) extends TypeMatcher("numeric") {
-    def matchType(value: JsonCursor)(implicit context: ExtractionContext): Boolean = NumberExtractor.extractExisting(value, schema, Nil).isRight
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext): Boolean = NumberExtractor.extractExisting(value, schema.copy(enumValues = None), Nil).isRight
   }
 
   case class IsString(val keyPath: KeyPath, schema: StringSchema) extends TypeMatcher("string") {
-    def matchType(value: JsonCursor)(implicit context: ExtractionContext): Boolean = StringExtractor.extractExisting(value, schema, Nil)isRight
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext): Boolean = StringExtractor.extractExisting(value, StringSchema(), Nil).isRight
 
     override def weight = super.weight - 1 // prefer the more specific matchers
   }
 
   case class IsBoolean(val keyPath: KeyPath, schema: BooleanSchema) extends TypeMatcher("boolean") {
-    def matchType(value: JsonCursor)(implicit context: ExtractionContext): Boolean = BooleanExtractor.extractExisting(value, schema, Nil).isRight
+    def matchType(value: JsonCursor)(implicit context: ExtractionContext): Boolean = BooleanExtractor.extractExisting(value, BooleanSchema(), Nil).isRight
   }
 
   case class IsDate(val keyPath: KeyPath, schema: DateSchema) extends TypeMatcher("date") {
