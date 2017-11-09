@@ -137,13 +137,6 @@ sealed trait SchemaWithDefinitions extends SchemaWithClassName {
     val (defschema2, defs) = definitionSchema.collectDefinitions
     defschema2.asInstanceOf[SchemaWithClassName] :: defs
   }
-  override def getSchema(className: String): Option[SchemaWithClassName] = {
-    if (className == this.fullClassName) {
-      Some(this)
-    } else {
-      definitions.find(_.fullClassName == className)
-    }
-  }
 }
 
 sealed trait SchemaWithClassName extends Schema {
@@ -159,12 +152,6 @@ sealed trait SchemaWithClassName extends Schema {
         titles.mkString(" ")
     }
   }
-  def getSchema(className: String): Option[SchemaWithClassName] = if (className == fullClassName) {
-    Some(this)
-  } else {
-    None
-  }
-  
   private def simpleClassName = {
     fullClassName.split("\\.").toList.last
   }
