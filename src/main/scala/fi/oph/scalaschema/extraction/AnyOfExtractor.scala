@@ -63,7 +63,7 @@ object AnyOfExtractor {
       }
 
       AllOfCriterion(criteria ++ onlyWhens)
-    case s: FlattenedSchema => AllOfCriterion(List(Flattened(keyPath, s, discriminatorCriteria(contextPath, s.itemSchema, keyPath))))
+    case s: FlattenedSchema => AllOfCriterion(List(Flattened(keyPath, s, discriminatorCriteria(contextPath, s.property.schema, keyPath))))
     case s: ReadFlattenedSchema => OneOfCriteria(s.asAnyOfSchema.alternatives.map(alt => discriminatorCriteria(contextPath, alt, keyPath)))
     case s: NumberSchema => IsNumeric(keyPath, s)
     case s: StringSchema => IsString(keyPath, s)

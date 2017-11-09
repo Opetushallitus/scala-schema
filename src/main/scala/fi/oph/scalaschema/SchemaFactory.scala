@@ -162,10 +162,8 @@ case class SchemaFactory() {
 
     val classSchema = createClassSchema(tpe, state)
 
-    val requiredProperties = classSchema.properties
-
-    requiredProperties match {
-      case List(property) => FlattenedSchema(classSchema.fullClassName, property.key, property.schema)
+    classSchema.properties match {
+      case List(property) => FlattenedSchema(classSchema, property)
       case Nil => throw new RuntimeException(s"@Flatten annotation on a case class with zero fields: $tpe")
       case _ => throw new RuntimeException(s"@Flatten annotation on a case class with more than one field: $tpe")
     }
@@ -180,7 +178,7 @@ case class SchemaFactory() {
 
     requiredProperties match {
       case List(property) =>
-        val flattenedSchema = FlattenedSchema(classSchema.fullClassName, property.key, property.schema)
+        val flattenedSchema = FlattenedSchema(classSchema, property)
         ReadFlattenedSchema(flattenedSchema, classSchema)
 
       case Nil => throw new RuntimeException(s"@ReadFlattened annotation on a case class with zero required fields: $tpe")

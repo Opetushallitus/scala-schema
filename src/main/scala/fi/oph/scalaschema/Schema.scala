@@ -112,26 +112,28 @@ case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: S
     }
   }
 }
-case class FlattenedSchema(fullClassName: String, fieldName: String, itemSchema: Schema) extends SchemaWithClassName with ElementSchema {
+case class FlattenedSchema(classSchema: ClassSchema, property: Property) extends SchemaWithClassName with ElementSchema {
   override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
-    val (newItemSchema, defs) = itemSchema.collectDefinitions
-    (this.copy(itemSchema = newItemSchema), defs)
+    val (newItemSchema, defs) = property.schema.collectDefinitions
+    (this.copy(property = property.copy(schema = newItemSchema)), defs)
   }
 
   def getValue(target: AnyRef): AnyRef = {
-    target.getClass.getMethod(fieldName).invoke(target)
+    classSchema.getPropertyValue(property, target)
   }
+
+  override def fullClassName: String = classSchema.fullClassName
 }
 
-case class ReadFlattenedSchema(flattenedSchema: FlattenedSchema, fullSchema: ClassSchema) extends SchemaWithClassName with ElementSchema {
+case class ReadFlattenedSchema(flattenedSchema: FlattenedSchema, classSchema: ClassSchema) extends SchemaWithClassName with ElementSchema {
   override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
-    val (newFullSchema, defs) = fullSchema.collectDefinitions
-    (this.copy(fullSchema = newFullSchema.asInstanceOf[ClassSchema], flattenedSchema = flattenedSchema.collectDefinitions._1.asInstanceOf[FlattenedSchema]), defs)
+    val (newFullSchema, defs) = classSchema.collectDefinitions
+    (this.copy(classSchema = newFullSchema.asInstanceOf[ClassSchema], flattenedSchema = flattenedSchema.collectDefinitions._1.asInstanceOf[FlattenedSchema]), defs)
   }
 
-  override def fullClassName: String = fullSchema.fullClassName
+  override def fullClassName: String = classSchema.fullClassName
 
-  def asAnyOfSchema = AnyOfSchema(List(fullSchema, flattenedSchema), fullClassName, Nil, Nil)
+  def asAnyOfSchema = AnyOfSchema(List(classSchema, flattenedSchema), fullClassName, Nil, Nil)
 }
 
 sealed trait SchemaWithDefinitions extends SchemaWithClassName {

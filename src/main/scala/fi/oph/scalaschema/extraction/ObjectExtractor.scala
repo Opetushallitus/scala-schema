@@ -7,8 +7,10 @@ import org.json4s._
 
 object ObjectExtractor {
   def extractFlattenedObject(cursor: JsonCursor, s: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
-    val extractedValue: Either[List[ValidationError], Any] = SchemaValidatingExtractor.extract(cursor, s.itemSchema, metadata)
-    extractedValue.right.map( value => instantiateCaseClass(cursor.path, s.fullClassName, List(value)) )
+    SchemaValidatingExtractor.extract(cursor, s.property.schema, metadata).right.map { extractedValue =>
+      val constructorParams = s.classSchema.properties.filterNot(_.synthetic).map { p => if (p == s.property) extractedValue else None }
+      instantiateCaseClass(cursor.path, s.fullClassName, constructorParams)
+    }
   }
 
   def extractMaybeFlattenedObject(cursor: JsonCursor, s: ReadFlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {

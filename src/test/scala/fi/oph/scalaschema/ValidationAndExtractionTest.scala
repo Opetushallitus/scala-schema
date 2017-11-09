@@ -196,6 +196,8 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
     }
     "@ReadFlattened annotation" - {
       "simple case" in {
+        verifyValidation[ReadableFromString](JObject(List("value" -> JString("hello"))), Right(ReadableFromString("hello", None)))
+        verifyValidation[ReadableFromString](JString("hello"), Right(ReadableFromString("hello", None)))
         verifyExtractionRoundTrip(ReadableFromString("value", None))
         verifyExtractionRoundTrip(ReadableFromString("value", Some("description")))
       }
