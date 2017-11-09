@@ -177,8 +177,13 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         }
       }
 
-      "Custom metadata annotations" in {
-        jsonSchemaOf(SchemaFactory.default.createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
+      "Custom metadata annotations" - {
+        "Simple case" in {
+          jsonSchemaOf(SchemaFactory.default.createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
+        }
+        "Transforming property schemas to other schemas" in {
+          jsonSchemaOf(SchemaFactory.default.createSchema[MadlyAnnotated]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#madlyannotated","additionalProperties":false,"title":"Madly annotated","required":["field"]}""")
+        }
       }
     }
 
@@ -231,3 +236,12 @@ case class CustomAnnotation(numbers: List[Int]) extends Metadata {
 
 @CustomAnnotation(List(1, 2, 3))
 case class CustomAnnotated()
+
+case class MadAnnotation() extends Metadata {
+  override def applyMetadata(x: ObjectWithMetadata[_], schemaFactory: SchemaFactory): ObjectWithMetadata[_] = x match {
+    case p: Property => p.copy(schema = BooleanSchema())
+  }
+  def appendMetadataToJsonSchema(obj: JObject): JObject = obj
+}
+
+case class MadlyAnnotated(@MadAnnotation field: String)
