@@ -11,7 +11,7 @@ import org.scalatest.{FreeSpec, Matchers}
 
 import scala.reflect.runtime.{universe => ru}
 
-class SerializationSpec extends FreeSpec with Matchers {
+class SerializationTest extends FreeSpec with Matchers {
   "strings" - {
     testSerialization(Strings("a"), """{"s":"a"}""")
   }
@@ -97,6 +97,10 @@ class SerializationSpec extends FreeSpec with Matchers {
 
   "@Flatten annotation" in {
     testSerialization(FlattenedNumber(1), """1""")
+  }
+
+  "@ReadFlattened annotation" in {
+    testSerialization(ReadableFromString("hello", None), """{"value":"hello"}""")
   }
 
   def testSerialization[T](x: T, expected: String, context: SerializationContext = defaultContext)(implicit tag: ru.TypeTag[T]) = {

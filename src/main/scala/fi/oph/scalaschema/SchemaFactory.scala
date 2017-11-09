@@ -75,8 +75,10 @@ case class SchemaFactory() {
           findFlattenAnnotation(tpe.typeSymbol) match {
             case None =>
               createClassOrTraitSchema(tpe, state)
-            case Some(f) =>
+            case Some(f: Flatten) =>
               createFlattenedSchema(tpe, state)
+            case Some(f: ReadFlattened) =>
+              createReadFlattenedSchema(tpe, state)
           }
         } else {
           throw new RuntimeException("Unsupported type: " + tpe)
@@ -85,14 +87,14 @@ case class SchemaFactory() {
     }
   }
 
-  private def findFlattenAnnotation(symbol: ru.Symbol) = {
+  private def findFlattenAnnotation(symbol: ru.Symbol): Option[StaticAnnotation] = {
     val checkIfFlatten = { symbol: ru.Symbol =>
-      symbol.fullName == classOf[Flatten].getName
+      symbol.fullName == classOf[Flatten].getName || symbol.fullName == classOf[ReadFlattened].getName
     }
-    findAnnotations(symbol, checkIfFlatten).asInstanceOf[List[Flatten]] match {
+    findAnnotations(symbol, checkIfFlatten) match {
       case List(flatten) => Some(flatten)
       case Nil => None
-      case _ => throw new RuntimeException(s"Multiple @Flatten annotations found for $symbol")
+      case _ => throw new RuntimeException(s"Multiple @Flatten or @ReadFlattened annotations found for $symbol")
     }
   }
 
@@ -157,16 +159,32 @@ case class SchemaFactory() {
 
   private def createFlattenedSchema(tpe: ru.Type, state: ScanState) = {
     if (tpe.typeSymbol.isAbstract) throw new RuntimeException(s"@Flatten annotation on abstract class or trait $tpe")
-    val constructorParams: List[ru.Symbol] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil)
-    constructorParams match {
-      case List(param) =>
-        val className: String = tpe.typeSymbol.fullName
-        val fieldName: String = param.name.decoded.trim
-        val wrappedSchema = createSchema(param.typeSignature, state.childState)
-        FlattenedSchema(className, fieldName, wrappedSchema)
 
+    val classSchema = createClassSchema(tpe, state)
+
+    val requiredProperties = classSchema.properties
+
+    requiredProperties match {
+      case List(property) => FlattenedSchema(classSchema.fullClassName, property.key, property.schema)
       case Nil => throw new RuntimeException(s"@Flatten annotation on a case class with zero fields: $tpe")
       case _ => throw new RuntimeException(s"@Flatten annotation on a case class with more than one field: $tpe")
+    }
+  }
+
+  private def createReadFlattenedSchema(tpe: ru.Type, state: ScanState) = {
+    if (tpe.typeSymbol.isAbstract) throw new RuntimeException(s"@ReadFlattened annotation on abstract class or trait $tpe")
+
+    val classSchema = createClassSchema(tpe, state)
+
+    val requiredProperties = classSchema.properties.filter(!_.schema.isInstanceOf[OptionalSchema])
+
+    requiredProperties match {
+      case List(property) =>
+        val flattenedSchema = FlattenedSchema(classSchema.fullClassName, property.key, property.schema)
+        ReadFlattenedSchema(flattenedSchema, classSchema)
+
+      case Nil => throw new RuntimeException(s"@ReadFlattened annotation on a case class with zero required fields: $tpe")
+      case _ => throw new RuntimeException(s"@ReadFlattened annotation on a case class with more than one required field: $tpe")
     }
   }
 

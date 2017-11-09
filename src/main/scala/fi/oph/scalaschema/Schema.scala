@@ -123,6 +123,17 @@ case class FlattenedSchema(fullClassName: String, fieldName: String, itemSchema:
   }
 }
 
+case class ReadFlattenedSchema(flattenedSchema: FlattenedSchema, fullSchema: ClassSchema) extends SchemaWithClassName with ElementSchema {
+  override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
+    val (newFullSchema, defs) = fullSchema.collectDefinitions
+    (this.copy(fullSchema = newFullSchema.asInstanceOf[ClassSchema], flattenedSchema = flattenedSchema.collectDefinitions._1.asInstanceOf[FlattenedSchema]), defs)
+  }
+
+  override def fullClassName: String = fullSchema.fullClassName
+
+  def asAnyOfSchema = AnyOfSchema(List(fullSchema, flattenedSchema), fullClassName, Nil, Nil)
+}
+
 sealed trait SchemaWithDefinitions extends SchemaWithClassName {
   def definitions: List[SchemaWithClassName]
   def withDefinitions(definitions: List[SchemaWithClassName]): SchemaWithDefinitions

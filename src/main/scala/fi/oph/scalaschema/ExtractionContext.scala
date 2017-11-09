@@ -1,6 +1,6 @@
 package fi.oph.scalaschema
 
-import fi.oph.scalaschema.extraction.AnyOfExtractor.CriteriaCollection
+import fi.oph.scalaschema.extraction.AnyOfExtractor.DiscriminatorCriterion
 import fi.oph.scalaschema.extraction.{CustomDeserializer, ValidationError}
 import org.json4s.JValue
 import org.json4s.JsonAST.JNothing
@@ -15,7 +15,7 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
                              validate: Boolean = true,
                              ignoreUnexpectedProperties: Boolean = false,
                              allowEmptyStrings: Boolean = true,
-                             criteriaCache: collection.mutable.Map[String, CriteriaCollection] = collection.mutable.Map.empty) {
+                             criteriaCache: collection.mutable.Map[String, DiscriminatorCriterion] = collection.mutable.Map.empty) {
   def hasSerializerFor(schema: SchemaWithClassName) = customSerializerFor(schema).isDefined
   def customSerializerFor(schema: SchemaWithClassName) = customDeserializers.find(_.isApplicable(schema))
   def ifValidating(errors: => List[ValidationError]) = if (validate) { errors } else { Nil }

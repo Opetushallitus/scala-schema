@@ -6,9 +6,13 @@ import org.json4s.JsonAST.JObject
 import org.json4s._
 
 object ObjectExtractor {
-  def extractFlattenedObject(cursor: JsonCursor, fs: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
-    val extractedValue: Either[List[ValidationError], Any] = SchemaValidatingExtractor.extract(cursor, fs.itemSchema, metadata)
-    extractedValue.right.map( value => instantiateCaseClass(cursor.path, fs.fullClassName, List(value)) )
+  def extractFlattenedObject(cursor: JsonCursor, s: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {
+    val extractedValue: Either[List[ValidationError], Any] = SchemaValidatingExtractor.extract(cursor, s.itemSchema, metadata)
+    extractedValue.right.map( value => instantiateCaseClass(cursor.path, s.fullClassName, List(value)) )
+  }
+
+  def extractMaybeFlattenedObject(cursor: JsonCursor, s: ReadFlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
+    AnyOfExtractor.extractAnyOf(cursor, s.asAnyOfSchema, metadata)
   }
 
   def extractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], AnyRef] = {

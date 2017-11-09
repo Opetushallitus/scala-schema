@@ -194,6 +194,17 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         verifyExtractionRoundTrip[MaybeFlattened](WithMoreData(1, "yes"))
       }
     }
+    "@ReadFlattened annotation" - {
+      "simple case" in {
+        verifyExtractionRoundTrip(ReadableFromString("value", None))
+        verifyExtractionRoundTrip(ReadableFromString("value", Some("description")))
+      }
+      "when used as a trait implementation option" in {
+        verifyExtractionRoundTrip[MaybeReadableFromString](ReadableFromString("value", None))
+        verifyExtractionRoundTrip[MaybeReadableFromString](ReadableFromString("value", Some("description")))
+        verifyExtractionRoundTrip[MaybeReadableFromString](OtherCase(0))
+      }
+    }
     "Synthetic properties" - {
       "Are ignored" in {
         verifyExtractionRoundTrip(WithSyntheticProperties())

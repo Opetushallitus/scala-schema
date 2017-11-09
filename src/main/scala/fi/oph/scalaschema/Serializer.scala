@@ -38,6 +38,7 @@ object Serializer {
           case _ => throw new RuntimeException("Schema not found for " + x + " as an implementation of " + s.fullClassName)
         }
       case s: FlattenedSchema => serializeWithSchema(s.getValue(x.asInstanceOf[AnyRef]), s.itemSchema)
+      case s: ReadFlattenedSchema => serializeWithSchema(x, s.fullSchema)
       case s: OptionalSchema => serializeOption(s, x)
       case s: ListSchema => serializeList(s, x)
       case s: MapSchema => serializeMap(s, x)

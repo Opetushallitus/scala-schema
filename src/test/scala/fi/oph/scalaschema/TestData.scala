@@ -117,3 +117,12 @@ case class WithMoreData(value: Int, description: String) extends MaybeFlattened
 
 @Flatten
 case class Flattened2Fields(a: Int, b: Int)
+
+@ReadFlattened
+case class ReadableFromString(value: String, description: Option[String]) extends MaybeReadableFromString
+
+@ReadFlattened
+case class ReadableFromTwoStrings(value: String, value2: String)
+
+trait MaybeReadableFromString
+case class OtherCase(number: Int) extends MaybeReadableFromString
