@@ -78,6 +78,8 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
 
     (thisSchemaWithDefinitionsRemoved, (definitionsCollectedFromDefinitions ++ definitionsCollectedFromProperties).distinct)
   }
+
+  override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 }
 
 case class ClassRefSchema(fullClassName: String, override val metadata: List[Metadata]) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
@@ -104,6 +106,8 @@ case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: S
       classType.fullClassName == obj.getClass.getName
     }
   }
+
+  override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 }
 case class FlattenedSchema(classSchema: ClassSchema, property: Property) extends SchemaWithClassName with ElementSchema {
   override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
@@ -116,6 +120,8 @@ case class FlattenedSchema(classSchema: ClassSchema, property: Property) extends
   }
 
   override def fullClassName: String = classSchema.fullClassName
+
+  override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 }
 
 case class ReadFlattenedSchema(flattenedSchema: FlattenedSchema, classSchema: ClassSchema) extends SchemaWithClassName with ElementSchema {
@@ -127,6 +133,8 @@ case class ReadFlattenedSchema(flattenedSchema: FlattenedSchema, classSchema: Cl
   override def fullClassName: String = classSchema.fullClassName
 
   def asAnyOfSchema = AnyOfSchema(List(classSchema, flattenedSchema), fullClassName, Nil, Nil)
+
+  override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 }
 
 sealed trait SchemaWithDefinitions extends SchemaWithClassName {
@@ -157,6 +165,8 @@ sealed trait SchemaWithClassName extends Schema {
   }
 
   def appliesToClass(k: Class[_]) = k.getName == fullClassName
+
+  def resolve(factory: SchemaFactory): SchemaWithClassName
 }
 
 case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false) extends ObjectWithMetadata[Property] {
