@@ -1,6 +1,6 @@
 package fi.oph.scalaschema
 
-import fi.oph.scalaschema.annotation.{EnumValue, Title}
+import fi.oph.scalaschema.annotation.{EnumValue, ReadFlattened, Title}
 import org.json4s.JsonAST.JValue
 
 sealed trait Schema {
@@ -50,7 +50,7 @@ case class DateSchema(dateType: Class[_]) extends SimpleSchema
 case class StringSchema(enumValues: Option[List[String]] = None) extends SimpleSchema
 case class BooleanSchema(enumValues: Option[List[Boolean]] = None) extends SimpleSchema
 case class NumberSchema(numberType: Class[_], enumValues: Option[List[Number]] = None) extends SimpleSchema
-case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false)
+case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false, readFlattened: Option[FlattenedSchema] = None)
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
 
   def getPropertyValue(property: Property, target: AnyRef): AnyRef = {
@@ -80,6 +80,8 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
   }
 
   override def resolve(factory: SchemaFactory): SchemaWithClassName = this
+
+  lazy val asAnyOfSchema = AnyOfSchema(this.copy(readFlattened = None) :: readFlattened.toList, fullClassName, Nil, Nil)
 }
 
 case class ClassRefSchema(fullClassName: String, override val metadata: List[Metadata]) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
@@ -120,19 +122,6 @@ case class FlattenedSchema(classSchema: ClassSchema, property: Property) extends
   }
 
   override def fullClassName: String = classSchema.fullClassName
-
-  override def resolve(factory: SchemaFactory): SchemaWithClassName = this
-}
-
-case class ReadFlattenedSchema(flattenedSchema: FlattenedSchema, classSchema: ClassSchema) extends SchemaWithClassName with ElementSchema {
-  override def collectDefinitions: (Schema, List[SchemaWithClassName]) = {
-    val (newFullSchema, defs) = classSchema.collectDefinitions
-    (this.copy(classSchema = newFullSchema.asInstanceOf[ClassSchema], flattenedSchema = flattenedSchema.collectDefinitions._1.asInstanceOf[FlattenedSchema]), defs)
-  }
-
-  override def fullClassName: String = classSchema.fullClassName
-
-  def asAnyOfSchema = AnyOfSchema(List(classSchema, flattenedSchema), fullClassName, Nil, Nil)
 
   override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 }

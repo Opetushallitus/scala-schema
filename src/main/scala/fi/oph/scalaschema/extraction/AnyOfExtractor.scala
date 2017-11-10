@@ -46,6 +46,7 @@ object AnyOfExtractor {
   private def discriminatorCriteria(contextPath: String, schema: Schema, keyPath: KeyPath)(implicit context: ExtractionContext): DiscriminatorCriterion = schema match {
     case s: ClassRefSchema =>
       discriminatorCriteria(contextPath, s.resolve(context.schemaFactory), keyPath)
+    case s: ClassSchema if s.readFlattened.isDefined => OneOfCriteria(s.asAnyOfSchema.alternatives.map(alt => discriminatorCriteria(contextPath, alt, keyPath)))
     case s: ClassSchema =>
       val discriminatorProps: List[Property] = s.properties.filter(_.metadata.contains(Discriminator()))
 
@@ -64,7 +65,6 @@ object AnyOfExtractor {
 
       AllOfCriterion(criteria ++ onlyWhens)
     case s: FlattenedSchema => AllOfCriterion(List(Flattened(keyPath, s, discriminatorCriteria(contextPath, s.property.schema, keyPath))))
-    case s: ReadFlattenedSchema => OneOfCriteria(s.asAnyOfSchema.alternatives.map(alt => discriminatorCriteria(contextPath, alt, keyPath)))
     case s: NumberSchema => IsNumeric(keyPath, s)
     case s: StringSchema => IsString(keyPath, s)
     case s: BooleanSchema => IsBoolean(keyPath, s)

@@ -29,6 +29,7 @@ object SchemaToJson {
     case t: ClassRefSchema => JObject(
       ("$ref" -> JString("#/definitions/" + t.simpleName))
     )
+    case s: ClassSchema if s.readFlattened.isDefined => toJsonSchemaWithoutMetadata(s.asAnyOfSchema)
     case t: ClassSchema => JObject(List(
       ("type" -> JString("object")),
       ("properties" -> toJsonProperties(t.properties)))
@@ -43,7 +44,6 @@ object SchemaToJson {
       List("anyOf" -> JArray(alternatives.map(toJsonSchemaWithoutMetadata(_)))) ++ toDefinitionProperty(definitions).toList
     )
     case FlattenedSchema(classSchema, property) => toJsonSchemaWithoutMetadata(property.schema)
-    case s:ReadFlattenedSchema => toJsonSchemaWithoutMetadata(s.asAnyOfSchema)
     case AnySchema() => JObject()
     case AnyObjectSchema() => JObject("type" -> JString("object"))
     case AnyListSchema() => JObject("type" -> JString("array"))

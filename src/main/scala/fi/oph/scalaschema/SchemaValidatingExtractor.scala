@@ -46,7 +46,6 @@ object SchemaValidatingExtractor {
         case ms: MapSchema => MapExtractor.extractMap(cursor, ms, metadata)
         case ds: DateSchema => DateExtractor.extractDate(cursor, ds, metadata)
         case fs: FlattenedSchema => ObjectExtractor.extractFlattenedObject(cursor, fs, metadata)
-        case fs: ReadFlattenedSchema => ObjectExtractor.extractMaybeFlattenedObject(cursor, fs, metadata)
         case cs: SchemaWithClassName =>
           (context.customSerializerFor(cs), cs) match {
             case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(cursor, cs, metadata)

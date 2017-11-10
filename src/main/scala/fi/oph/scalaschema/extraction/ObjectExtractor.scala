@@ -13,11 +13,12 @@ object ObjectExtractor {
     }
   }
 
-  def extractMaybeFlattenedObject(cursor: JsonCursor, s: ReadFlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
-    AnyOfExtractor.extractAnyOf(cursor, s.asAnyOfSchema, metadata)
+  def extractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = cs.readFlattened match {
+    case Some(flattenedSchema) => AnyOfExtractor.extractAnyOf(cursor, cs.asAnyOfSchema, metadata)
+    case None => doExtractObject(cursor, cs, metadata)
   }
 
-  def extractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
+  private def doExtractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     cursor.json match {
       case o@JObject(values) =>
         val propertyResults: List[Either[List[ValidationError], Any]] = cs.properties

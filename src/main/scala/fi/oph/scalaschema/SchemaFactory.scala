@@ -74,11 +74,11 @@ case class SchemaFactory() {
         if (tpe.typeSymbol.isClass) {
           findFlattenAnnotation(tpe.typeSymbol) match {
             case None =>
-              createClassOrTraitSchema(tpe, state)
+              createClassOrTraitSchema(tpe, state, false)
+            case Some(f: ReadFlattened) =>
+              createClassOrTraitSchema(tpe, state, true)
             case Some(f: Flatten) =>
               createFlattenedSchema(tpe, state)
-            case Some(f: ReadFlattened) =>
-              createReadFlattenedSchema(tpe, state)
           }
         } else {
           throw new RuntimeException("Unsupported type: " + tpe)
@@ -133,15 +133,16 @@ case class SchemaFactory() {
     tyep
   }
 
-  private def createClassOrTraitSchema(tpe: ru.Type, state: ScanState) = {
+  private def createClassOrTraitSchema(tpe: ru.Type, state: ScanState, readFlattened: Boolean) = {
     val className: String = tpe.typeSymbol.fullName
     if (!state.foundTypes.contains(className)) {
       state.foundTypes.add(className)
 
       val newSchema = if (tpe.typeSymbol.isAbstract) {
+        if (readFlattened) throw new RuntimeException(s"@ReadFlattened annotation on abstract class or trait $tpe")
         applyMetadataFromClassAndTraits(tpe, AnyOfSchema(findImplementations(tpe, state.childState), className, Nil))
       } else {
-        createClassSchema(tpe, state)
+        createClassSchema(tpe, state, readFlattened)
       }
 
       if (state.root) {
@@ -160,7 +161,7 @@ case class SchemaFactory() {
   private def createFlattenedSchema(tpe: ru.Type, state: ScanState) = {
     if (tpe.typeSymbol.isAbstract) throw new RuntimeException(s"@Flatten annotation on abstract class or trait $tpe")
 
-    val classSchema = createClassSchema(tpe, state)
+    val classSchema = createClassSchema(tpe, state, false)
 
     classSchema.properties match {
       case List(property) => FlattenedSchema(classSchema, property)
@@ -169,26 +170,9 @@ case class SchemaFactory() {
     }
   }
 
-  private def createReadFlattenedSchema(tpe: ru.Type, state: ScanState) = {
-    if (tpe.typeSymbol.isAbstract) throw new RuntimeException(s"@ReadFlattened annotation on abstract class or trait $tpe")
-
-    val classSchema = createClassSchema(tpe, state)
-
-    val requiredProperties = classSchema.properties.filter(!_.schema.isInstanceOf[OptionalSchema])
-
-    requiredProperties match {
-      case List(property) =>
-        val flattenedSchema = FlattenedSchema(classSchema, property)
-        ReadFlattenedSchema(flattenedSchema, classSchema)
-
-      case Nil => throw new RuntimeException(s"@ReadFlattened annotation on a case class with zero required fields: $tpe")
-      case _ => throw new RuntimeException(s"@ReadFlattened annotation on a case class with more than one required field: $tpe")
-    }
-  }
-
   private def createClassRefSchema(tpe: ru.Type) = applyMetadataFromClassAndTraits(tpe, ClassRefSchema(tpe.typeSymbol.fullName, Nil))
 
-  private def createClassSchema(tpe: ru.Type, state: ScanState) = {
+  private def createClassSchema(tpe: ru.Type, state: ScanState, readFlattened: Boolean): ClassSchema = {
     import MemberFinder.members
     val traits: List[ru.Type] = findTraits(tpe)
 
@@ -232,7 +216,20 @@ case class SchemaFactory() {
       }
     }
 
-    applyMetadataFromClassAndTraits(tpe, ClassSchema(className, properties, Nil))
+    val classSchema = applyMetadataFromClassAndTraits(tpe, ClassSchema(className, properties, Nil))
+
+    if (readFlattened) {
+      val requiredProperties = classSchema.properties.filter(!_.schema.isInstanceOf[OptionalSchema])
+      requiredProperties match {
+        case List(property) =>
+          val flattenedSchema = FlattenedSchema(classSchema, property)
+          classSchema.copy(readFlattened = Some(flattenedSchema))
+        case Nil => throw new RuntimeException(s"@ReadFlattened annotation on a case class with zero required fields: $tpe")
+        case _ => throw new RuntimeException(s"@ReadFlattened annotation on a case class with more than one required field: $tpe")
+      }
+    } else {
+      classSchema
+    }
   }
 
   private def findTraits(tpe: ru.Type) = {
