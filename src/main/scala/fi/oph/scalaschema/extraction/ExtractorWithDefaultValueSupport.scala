@@ -11,6 +11,11 @@ trait ExtractorWithDefaultValueSupport[V <: Any, S <: Schema] {
         case Some(v) => Right(v)
         case _ => Left(List(ValidationError(cursor.path, cursor.json, MissingProperty())))
       }
+    case JNull =>
+      DefaultValue.getDefaultValue[V](metadata) match {
+        case Some(v) => Right(v)
+        case _ => extractExisting(cursor, schema, metadata)
+      }
     case _ =>
       extractExisting(cursor, schema, metadata)
   }

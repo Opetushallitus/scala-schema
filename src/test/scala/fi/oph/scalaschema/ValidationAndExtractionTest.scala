@@ -161,14 +161,19 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
       }
     }
     "@DefaultValue annotation" - {
-      "Booleans" in {
-        verifyValidation[BooleansWithDefault](JObject(), Right(BooleansWithDefault(true)))
+      "When value is missing from data" - {
+        "Booleans" in {
+          verifyValidation[BooleansWithDefault](JObject(), Right(BooleansWithDefault(true)))
+        }
+        "Strings" in {
+          verifyValidation[NumbersWithDefault](JObject(), Right(NumbersWithDefault(1)))
+        }
+        "Numbers" in {
+          verifyValidation[StringsWithDefault](JObject(), Right(StringsWithDefault("hello")))
+        }
       }
-      "Strings" in {
-        verifyValidation[NumbersWithDefault](JObject(), Right(NumbersWithDefault(1)))
-      }
-      "Numbers" in {
-        verifyValidation[StringsWithDefault](JObject(), Right(StringsWithDefault("hello")))
+      "When value is null in data" in {
+        verifyValidation[BooleansWithDefault](JObject(JField("field", JNull)), Right(BooleansWithDefault(true)))
       }
     }
     "@EnumValue annotation" - {

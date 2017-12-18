@@ -26,8 +26,7 @@ object ObjectExtractor {
           .map { property =>
             val propertyValueCursor = cursor.subCursor(o \ property.key, property.key)
             val valuePresent = propertyValueCursor.json match {
-              case JNothing => false
-              case JNull => false
+              case JNothing | JNull => false
               case _ => true
             }
 
