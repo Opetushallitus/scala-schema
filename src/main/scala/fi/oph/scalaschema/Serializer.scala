@@ -58,13 +58,14 @@ object Serializer {
   }
 
   private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
-    case xs: List[_] => JArray(xs.map { x => serializeWithSchema(x, s.itemSchema)})
-    case _ => throw new RuntimeException("Not a List: " + x)
+    case xs: Traversable[_] => JArray(xs.toList.map { x => serializeWithSchema(x, s.itemSchema)})
+    case xs: Array[_] => JArray(xs.toList.map { x => serializeWithSchema(x, s.itemSchema)})
+    case _ => throw new RuntimeException("Not a Traversable or Array: " + x)
   }
 
   private def serializeMap(s: MapSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
     case xs: Map[String, _] => JObject(xs.toList.map { case (key, value) => JField(key, serializeWithSchema(value, s.itemSchema))})
-    case _ => throw new RuntimeException("Not a List: " + x)
+    case _ => throw new RuntimeException("Not a Map: " + x)
   }
 
   private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = JObject(s.properties.flatMap { p =>

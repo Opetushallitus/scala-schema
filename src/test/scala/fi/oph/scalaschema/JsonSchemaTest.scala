@@ -59,8 +59,16 @@ class JsonSchemaTest extends FreeSpec with Matchers {
         jsonSchemaPropertiesOf(classOf[Dates]) should equal("""{"a":{"type":"string","format":"date"},"b":{"type":"string","format":"date"},"c":{"type":"string","format":"date"},"d":{"type":"string","format":"date"},"e":{"type":"string","format":"date"},"f":{"type":"string","format":"date"}}""")
       }
     }
-    "Lists" in {
-      jsonSchemaPropertiesOf(classOf[Lists]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
+    "List-like fields" - {
+      "List" in {
+        jsonSchemaPropertiesOf(classOf[Lists]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
+      }
+      "Seq" in {
+        jsonSchemaPropertiesOf(classOf[Seqs]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
+      }
+      "Array" in {
+        jsonSchemaPropertiesOf(classOf[Arrays]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
+      }
     }
     "Maps" in {
       jsonSchemaPropertiesOf(classOf[Maps]) should equal("""{"things":{"type":"object","patternProperties":{".*":{"type":"number"}}}}""")

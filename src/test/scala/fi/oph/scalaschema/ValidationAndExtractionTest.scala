@@ -137,8 +137,16 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
     "JValue fields" in {
       verifyExtractionRoundTrip(WithJValue(JString("boo")))
     }
-    "Seqs" - {
-      verifyValidation[Seq[String]](JArray(List(JString("HELLO"))), Right(List("HELLO")))
+    "List-like fields" - {
+      "List" in {
+        verifyValidation[List[String]](JArray(List(JString("HELLO"))), Right(List("HELLO")))
+      }
+      "Seq" in {
+        verifyValidation[Seq[String]](JArray(List(JString("HELLO"))), Right(List("HELLO")))
+      }
+      "Array" in {
+        verifyValidation[Array[String]](JArray(List(JString("HELLO"))), Right(List("HELLO")))
+      }
     }
     "Maps" - {
       "Map[String, Int]" in {

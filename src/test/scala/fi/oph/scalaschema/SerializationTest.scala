@@ -39,8 +39,16 @@ class SerializationTest extends FreeSpec with Matchers {
     testSerialization(Booleans(true), """{"field":true}""")
   }
 
-  "lists" in {
-    testSerialization(Lists(List(1)), """{"things":[1]}""")
+  "lists" - {
+    "List" in {
+      testSerialization(Lists(List(1)), """{"things":[1]}""")
+    }
+    "Seq/Vector" in {
+      testSerialization(Seqs(Vector(1)), """{"things":[1]}""")
+    }
+    "Array" in {
+      testSerialization(Arrays(Array(1)), """{"things":[1]}""")
+    }
   }
 
   "maps" in {
