@@ -1,5 +1,7 @@
 package fi.oph.scalaschema.extraction
 
+import java.lang.reflect.Constructor
+
 import fi.oph.scalaschema._
 import fi.oph.scalaschema.annotation.{DefaultValue, OnlyWhen, SerializableOnlyWhen}
 import org.json4s.JsonAST.JObject
@@ -73,13 +75,19 @@ object ObjectExtractor {
     }
   }
 
+  private val constructorCache: collection.mutable.Map[String, Constructor[_]] = collection.mutable.Map.empty
+
   private def instantiateCaseClass(path: String, className: String, params: List[Any]) = {
-    val klass = Class.forName(className)
-    val constructors = klass.getConstructors
-    if (constructors.isEmpty) {
-      throw new RuntimeException(s"Cannot find constructor for $klass")
+    val constructor = this.synchronized {
+      constructorCache.getOrElseUpdate(className, {
+        val klass = Class.forName(className)
+        val constructors = klass.getConstructors
+        if (constructors.isEmpty) {
+          throw new RuntimeException(s"Cannot find constructor for $klass")
+        }
+        constructors.apply(0)
+      })
     }
-    val constructor = constructors.apply(0)
     val constructorParams: List[Object] = params.asInstanceOf[List[Object]]
     try {
       constructor.newInstance(constructorParams: _*).asInstanceOf[AnyRef]
