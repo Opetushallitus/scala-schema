@@ -24,7 +24,7 @@ object SchemaFactory {
 case class SchemaFactory() {
   private val cachedSchemas: collection.mutable.Map[ru.Type, Schema] = collection.mutable.Map.empty
 
-  def createSchema(className: String): SchemaWithClassName = {
+  def createSchema(className: String): SchemaWithClassName = synchronized {
     getCachedSchema(typeByName(className)).asInstanceOf[SchemaWithClassName]
   }
 
@@ -44,9 +44,12 @@ case class SchemaFactory() {
     cachedSchemas.getOrElseUpdate(tpe, createSchema(tpe, ScanState()))
   }
 
+  private val typeByNameCache: collection.mutable.Map[String, ru.Type] = collection.mutable.Map.empty
+
   private def typeByName(className: String): ru.Type = {
-    val tyep: ru.Type = reflect.runtime.currentMirror.classSymbol(Class.forName(className)).toType
-    tyep
+    typeByNameCache.getOrElseUpdate(className, {
+      reflect.runtime.currentMirror.classSymbol(Class.forName(className)).toType
+    })
   }
 
   private case class ScanState(root: Boolean = true, foundTypes: collection.mutable.Set[String] = collection.mutable.Set.empty, createdTypes: collection.mutable.Set[SchemaWithClassName] = collection.mutable.Set.empty) {
@@ -236,7 +239,7 @@ case class SchemaFactory() {
     tpe.baseClasses
       .map(_.fullName)
       .filter(!List("scala.Any").contains(_))
-      .map {typeByName(_)}
+      .map(typeByName)
       .filter {_.typeSymbol.asClass.isTrait}
       .filterNot {_ == tpe}
   }
@@ -257,16 +260,24 @@ case class SchemaFactory() {
     findAnnotations(symbol, checkIfMetadataAnnotation).asInstanceOf[List[Metadata]]
   }
 
+  private val baseClassCache: collection.mutable.Map[ru.Type, List[String]] = collection.mutable.Map.empty
+
+  private def getBaseClasses(tpe: ru.Type): List[String] = {
+    baseClassCache.getOrElseUpdate(tpe, {
+      tpe.baseClasses.map(_.fullName)
+    })
+  }
+
   private def isListType(tpe: ru.Type): Boolean = {
-    tpe.baseClasses.exists(s => s.fullName == "scala.collection.Traversable" ||
-      s.fullName == "scala.Array" ||
-      s.fullName == "scala.Seq" ||
-      s.fullName == "scala.List" ||
-      s.fullName == "scala.Vector")
+    getBaseClasses(tpe).exists(s => s == "scala.collection.Traversable" ||
+      s == "scala.Array" ||
+      s == "scala.Seq" ||
+      s == "scala.List" ||
+      s == "scala.Vector")
   }
 
   private def isMapType(tpe: ru.Type): Boolean = {
-    tpe.baseClasses.exists(s => s.fullName == "scala.collection.immutable.Map")
+    getBaseClasses(tpe).contains("scala.collection.immutable.Map")
   }
 
   private def findImplementations(traitType: ru.Type, state: ScanState): List[SchemaWithClassName] = {
@@ -313,14 +324,18 @@ private object TraitImplementationFinder {
 }
 
 object Annotations {
-  def findAnnotations(symbol: ru.Symbol, annotationsSupported: ru.Symbol => Boolean): List[StaticAnnotation] = {
-    symbol.annotations.flatMap { annotation =>
-      val tpe: ru.Symbol = annotation.tree.tpe.typeSymbol
-      Some(tpe).filter(annotationsSupported).map { annotationClass =>
+  private val annotationCache: collection.mutable.Map[ru.Symbol, List[(ru.Symbol, StaticAnnotation)]] = collection.mutable.Map.empty
+
+  def findAnnotations(symbol: ru.Symbol, annotationsSupported: ru.Symbol => Boolean): List[StaticAnnotation] = this.synchronized {
+    val annotations = annotationCache.getOrElseUpdate(symbol, {
+      symbol.annotations.map { annotation =>
+        val annotationSymbol: ru.Symbol = annotation.tree.tpe.typeSymbol
         val annotationParams: List[ru.Tree] = annotation.tree.children.tail
-        Annotations.parseAnnotation(annotationClass, annotationParams)
+        val staticAnnotation = Annotations.parseAnnotation(annotationSymbol, annotationParams)
+        (annotationSymbol, staticAnnotation)
       }
-    }
+    })
+    annotations.filter(x => annotationsSupported(x._1)).map(_._2)
   }
 
   import scala.tools.reflect.ToolBox
