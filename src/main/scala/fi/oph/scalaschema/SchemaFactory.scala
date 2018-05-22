@@ -332,7 +332,7 @@ object Annotations {
         val annotationSymbol: ru.Symbol = annotation.tree.tpe.typeSymbol
         val annotationParams: List[ru.Tree] = annotation.tree.children.tail
         val staticAnnotation = Annotations.parseAnnotation(annotationSymbol, annotationParams)
-	      (annotationSymbol, staticAnnotation)
+        (annotationSymbol, staticAnnotation)
       }
     })
     annotations.filter(x => annotationsSupported(x._1)).map(_._2)
