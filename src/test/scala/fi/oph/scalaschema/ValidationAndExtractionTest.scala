@@ -359,6 +359,21 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
           verifyValidation[WrapperForTraitWithMultipleOnlyWhenAllRestrictions](JObject("a" -> JInt(3), "b" -> JInt(4), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
           verifyValidation[WrapperForTraitWithMultipleOnlyWhenAllRestrictions](JObject("a" -> JInt(1), "b" -> JInt(2), "field" -> JObject()), Right(WrapperForTraitWithMultipleOnlyWhenAllRestrictions(Alt4(), 1, 2)))
         }
+
+        "Works with multiple @OnlyWhenAll annotations per case class and multiple @OnlyWhen annotations" in {
+          val expectedError1 = NotAnyOf(Map(
+            "alt5" -> List("""property "somefield" exists"""),
+            "alt6" -> List("../a=100 or ../b=200", "../c=1 and ../d=2")
+          ))
+          val expectedError2 = NotAnyOf(Map(
+            "alt5" -> List("""property "somefield" exists"""),
+            "alt6" -> List("../a=100 or ../b=200")
+          ))
+          verifyValidation[WrapperForTraitWithAllKindsOfRestrictions](JObject("a" -> JInt(55), "b" -> JInt(55), "c" -> JInt(55), "d" -> JInt(55), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError1))))
+          verifyValidation[WrapperForTraitWithAllKindsOfRestrictions](JObject("a" -> JInt(55), "b" -> JInt(55), "c" -> JInt(1), "d" -> JInt(2), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError2))))
+          verifyValidation[WrapperForTraitWithAllKindsOfRestrictions](JObject("a" -> JInt(100), "b" -> JInt(55), "c" -> JInt(1), "d" -> JInt(2), "field" -> JObject()), Right(WrapperForTraitWithAllKindsOfRestrictions(Alt6(), 100, 55, 1, 2)))
+          verifyValidation[WrapperForTraitWithAllKindsOfRestrictions](JObject("a" -> JInt(55), "b" -> JInt(200), "c" -> JInt(1), "d" -> JInt(2), "field" -> JObject()), Right(WrapperForTraitWithAllKindsOfRestrictions(Alt6(), 55, 200, 1, 2)))
+        }
       }
     }
 
@@ -491,6 +506,15 @@ case class Alt3(name: String) extends TraitWithMultipleOnlyWhenAllRestrictions
 @OnlyWhenAll("../a", 1)
 @OnlyWhenAll("../b", 2)
 case class Alt4() extends TraitWithMultipleOnlyWhenAllRestrictions
+
+case class WrapperForTraitWithAllKindsOfRestrictions(field: TraitWithAllKindsOfRestrictions, a: Int, b: Int, c: Int, d: Int)
+sealed trait TraitWithAllKindsOfRestrictions
+case class Alt5(somefield: String) extends TraitWithAllKindsOfRestrictions
+@OnlyWhen("../a", 100)
+@OnlyWhen("../b", 200)
+@OnlyWhenAll("../c", 1)
+@OnlyWhenAll("../d", 2)
+case class Alt6() extends TraitWithAllKindsOfRestrictions
 
 case class FieldOkIfParentMissing(@OnlyWhen("..", None) field: Option[String])
 case class FieldOkIfParentMissing2(
