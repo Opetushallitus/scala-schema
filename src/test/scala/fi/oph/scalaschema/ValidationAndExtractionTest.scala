@@ -314,6 +314,54 @@ class ValidationAndExtractionTest extends FreeSpec with Matchers {
         }
       }
     }
+
+    "@OnlyWhenAll annotation" - {
+      "When applied to fields" - {
+        "Allows field only when all values match" in {
+          val expectedError = OnlyWhenAllMismatch(List(SerializableOnlyWhen("../number", JInt(1)), SerializableOnlyWhen("../string", JString("pow"))))
+          verifyValidation[OnlyWhenAllFieldContainer](JObject("number" -> JInt(2), "string" -> JString("pow"), "thing" -> JObject("field2" -> JString("bogus"))), Left(List(ValidationError("thing.field2", JString("bogus"), expectedError))))
+          verifyValidation[OnlyWhenAllFieldContainer](JObject("number" -> JInt(1), "string" -> JString("hello"), "thing" -> JObject("field2" -> JString("bogus"))), Left(List(ValidationError("thing.field2", JString("bogus"), expectedError))))
+          verifyValidation[OnlyWhenAllFieldContainer](JObject("number" -> JInt(1), "string" -> JString("pow"), "thing" -> JObject("field2" -> JString("bogus"))), Right(OnlyWhenAllFieldContainer(1, "pow", WithOnlyWhenAllFieldsInParent(Some("bogus")))))
+        }
+
+        "Works with @DefaultValue and multiple allowed alternatives" in {
+          val expectedError = OnlyWhenAllMismatch(List(SerializableOnlyWhen("foo", JInt(1)), SerializableOnlyWhen("bar", JInt(2))))
+          verifyValidation[WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues](JObject("foo" -> JInt(3), "bar" -> JInt(4), "field" -> JString("hello2")), Left(List(ValidationError("field", JString("hello2"), expectedError))))
+          verifyValidation[WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues](JObject("foo" -> JInt(3), "bar" -> JInt(4)), Right(WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues(3, 4, "hello")))
+          verifyValidation[WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues](JObject("foo" -> JInt(1), "bar" -> JInt(2), "field" -> JString("hello2")), Right(WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues(1, 2, "hello2")))
+        }
+
+        "Allows a value matching @DefaultValue even when @OnlyWhenAll says it's not ok" in {
+          verifyExtractionRoundTrip[WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues](WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues(3, 4, "hello"))
+        }
+
+        "Allows null-checking by using None as value" in {
+          verifyValidation[FieldOkIfParentMissing2](JObject("field2" -> JString("hello")), Right(FieldOkIfParentMissing2(Some("hello"))))
+          verifyValidation[WrapperForTraitOkIfParentMissing2](JObject("thing2" -> JObject("field2" -> JString("hello"))), Left(List(ValidationError("thing2.field2", JString("hello"), OnlyWhenAllMismatch(List(SerializableOnlyWhen("..", JNull)))))))
+          verifyValidation[WrapperForTraitOkIfParentMissing2](JObject("thing2" -> JObject()), Right(WrapperForTraitOkIfParentMissing2(FieldOkIfParentMissing2(None))))
+        }
+      }
+      "When applied to case classes" - {
+        "Restricts the allowed alternatives in AnyOf schemas" in {
+          val expectedError = NotAnyOf(Map(
+            "altc" -> List("""property "name" exists"""),
+            "altd" -> List("""../x=true""")
+          ))
+          verifyValidation[WrapperForTraitWithOnlyWhenAllRestrictions](JObject("x" -> JBool(false), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+          verifyValidation[WrapperForTraitWithOnlyWhenAllRestrictions](JObject("x" -> JBool(true), "field" -> JObject()), Right(WrapperForTraitWithOnlyWhenAllRestrictions(AltD(), true)))
+        }
+
+        "Works with multiple @OnlyWhenAll annotations per case class" in {
+          val expectedError = NotAnyOf(Map(
+            "alt3" -> List("""property "name" exists"""),
+            "alt4" -> List("""../a=1 and ../b=2""")
+          ))
+          verifyValidation[WrapperForTraitWithMultipleOnlyWhenAllRestrictions](JObject("a" -> JInt(3), "b" -> JInt(4), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+          verifyValidation[WrapperForTraitWithMultipleOnlyWhenAllRestrictions](JObject("a" -> JInt(1), "b" -> JInt(2), "field" -> JObject()), Right(WrapperForTraitWithMultipleOnlyWhenAllRestrictions(Alt4(), 1, 2)))
+        }
+      }
+    }
+
     "JValues" - {
       "JValue" in {
         verifyExtractionRoundTrip[JValue](JObject())
@@ -396,6 +444,21 @@ case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d:
 case class OnlyWhenFieldContainer(number: Int, thing: WithOnlyWhenFieldsInParent)
 case class WithOnlyWhenFieldsInParent(@OnlyWhen("../number", 1) field: Option[String])
 
+case class OnlyWhenAllFieldContainer(number: Int, string: String, thing: WithOnlyWhenAllFieldsInParent)
+case class WithOnlyWhenAllFieldsInParent(
+  @OnlyWhenAll("../number", 1)
+  @OnlyWhenAll("../string", "pow")
+  field2: Option[String]
+)
+
+case class WithOnlyAllWhenFieldsWithDefaultValueAndMultipleRequiredValues(
+  foo: Int,
+  bar: Int,
+  @OnlyWhenAll("foo", 1)
+  @OnlyWhenAll("bar", 2)
+  @DefaultValue("hello")
+  field: String)
+
 case class WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(
    asdf: Int,
    @OnlyWhen("asdf", 1)
@@ -409,6 +472,12 @@ case class AltA(name: String) extends TraitWithRestrictions
 @OnlyWhen("../allowAll", true)
 case class AltB() extends TraitWithRestrictions
 
+case class WrapperForTraitWithOnlyWhenAllRestrictions(field: TraitWithOnlyWhenAllRestrictions, x: Boolean)
+sealed trait TraitWithOnlyWhenAllRestrictions
+case class AltC(name: String) extends TraitWithOnlyWhenAllRestrictions
+@OnlyWhenAll("../x", true)
+case class AltD() extends TraitWithOnlyWhenAllRestrictions
+
 case class WrapperForTraitWithMultipleRestrictions(field: TraitWithMultipleRestrictions, asdf: Int)
 sealed trait TraitWithMultipleRestrictions
 case class Alt1(name: String) extends TraitWithMultipleRestrictions
@@ -416,8 +485,20 @@ case class Alt1(name: String) extends TraitWithMultipleRestrictions
 @OnlyWhen("../asdf", 2)
 case class Alt2() extends TraitWithMultipleRestrictions
 
+case class WrapperForTraitWithMultipleOnlyWhenAllRestrictions(field: TraitWithMultipleOnlyWhenAllRestrictions, a: Int, b: Int)
+sealed trait TraitWithMultipleOnlyWhenAllRestrictions
+case class Alt3(name: String) extends TraitWithMultipleOnlyWhenAllRestrictions
+@OnlyWhenAll("../a", 1)
+@OnlyWhenAll("../b", 2)
+case class Alt4() extends TraitWithMultipleOnlyWhenAllRestrictions
+
 case class FieldOkIfParentMissing(@OnlyWhen("..", None) field: Option[String])
+case class FieldOkIfParentMissing2(
+  @OnlyWhenAll("..", None)
+  field2: Option[String]
+)
 case class WrapperForTraitOkIfParentMissing(thing: FieldOkIfParentMissing)
+case class WrapperForTraitOkIfParentMissing2(thing2: FieldOkIfParentMissing2)
 
 trait TraitWithParentRestrictions
 @OnlyWhen("..", None)

@@ -22,3 +22,4 @@ case class LessThanMinimumNumberOfItems(minimumItems: Int, @EnumValue("lessThanM
 case class MoreThanMaximumNumberOfItems(maximumItems: Int, @EnumValue("moreThanMaximumNumberOfItems") errorType: String = "moreThanMaximumNumberOfItems") extends ValidationRuleViolation
 case class OtherViolation(message: String, @EnumValue("otherViolation") errorType: String = "otherViolation") extends ValidationRuleViolation
 case class OnlyWhenMismatch(oneOfMustMatch: List[SerializableOnlyWhen], @EnumValue("onlyWhenMismatch") errorType: String="onlyWhenMismatch") extends ValidationRuleViolation
+case class OnlyWhenAllMismatch(allOfMustMatch: List[SerializableOnlyWhen], @EnumValue("onlyWhenAllMismatch") errorType: String="onlyWhenAllMismatch") extends ValidationRuleViolation

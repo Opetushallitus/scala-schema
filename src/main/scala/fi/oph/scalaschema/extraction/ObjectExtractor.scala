@@ -3,7 +3,7 @@ package fi.oph.scalaschema.extraction
 import java.lang.reflect.Constructor
 
 import fi.oph.scalaschema._
-import fi.oph.scalaschema.annotation.{DefaultValue, OnlyWhen, SerializableOnlyWhen}
+import fi.oph.scalaschema.annotation.{DefaultValue, OnlyWhen, OnlyWhenAll, SerializableOnlyWhen}
 import org.json4s.JsonAST.JObject
 import org.json4s._
 
@@ -21,6 +21,39 @@ object ObjectExtractor {
   }
 
   private def doExtractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
+    def matchOnlyWhens(property: Property, onlyWhenAnnotations: List[SerializableOnlyWhen], extractedPropertyValue: Either[List[ValidationError], Any]) = {
+      val found = onlyWhenAnnotations.find { case SerializableOnlyWhen(path, expectedValue) =>
+        val valueFromPath: JValue = cursor.navigate(path).json
+        JsonCompare.equals(valueFromPath, expectedValue)
+      }
+      if (found.isDefined) {
+        None
+      } else {
+        DefaultValue.getDefaultValue[Any](property.metadata) match {
+          case Some(v) if Right(v) == extractedPropertyValue => None // Allow default value even when field is otherwise rejected
+          case _ => Some(OnlyWhenMismatch(onlyWhenAnnotations))
+        }
+      }
+    }
+
+    def matchOnlyWhenAlls(property: Property, onlyWhenAnnotations: List[SerializableOnlyWhen], extractedPropertyValue: Either[List[ValidationError], Any]) = {
+      val found = onlyWhenAnnotations.forall { case SerializableOnlyWhen(path, expectedValue) =>
+        val valueFromPath: JValue = cursor.navigate(path).json
+        JsonCompare.equals(valueFromPath, expectedValue)
+      }
+      if (found) {
+        None
+      } else {
+        DefaultValue.getDefaultValue[Any](property.metadata) match {
+          case Some(v) if Right(v) == extractedPropertyValue => None // Allow default value even when field is otherwise rejected
+          case _ => Some(OnlyWhenAllMismatch(onlyWhenAnnotations))
+        }
+      }
+    }
+
+    def validationError(propertyValueCursor: JsonCursor, mismatches: (Option[ValidationRuleViolation], Option[ValidationRuleViolation])): Either[List[ValidationError], Nothing] =
+      Left((mismatches._1.toList ++ mismatches._2.toList).map(violation => ValidationError(propertyValueCursor.path, propertyValueCursor.json, violation)))
+
     cursor.json match {
       case o@JObject(values) =>
         val propertyResults: List[Either[List[ValidationError], Any]] = cs.properties
@@ -33,31 +66,20 @@ object ObjectExtractor {
             }
 
             val onlyWhenAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case o:OnlyWhen if valuePresent => o.serializableForm }
+            val onlyWhenAllAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case o:OnlyWhenAll if valuePresent => o.serializableForm }
 
             val extractedPropertyValue = SchemaValidatingExtractor.extract(propertyValueCursor, property.schema, property.metadata)
 
-            val onlyWhenMismatch: Option[OnlyWhenMismatch] = onlyWhenAnnotations match {
-              case Nil => None
-              case _ =>
-                val found = onlyWhenAnnotations.find { case SerializableOnlyWhen(path, expectedValue) =>
-                  val valueFromPath: JValue = cursor.navigate(path).json
-                  JsonCompare.equals(valueFromPath, expectedValue)
-                }
-                if (found.isDefined) {
-                  None
-                } else {
-                  DefaultValue.getDefaultValue[Any](property.metadata) match {
-                    case Some(v) if Right(v) == extractedPropertyValue => None // Allow default value even when field is otherwise rejected
-                    case _ => Some(OnlyWhenMismatch(onlyWhenAnnotations))
-                  }
-                }
+            val onlyWhenMismatch = (onlyWhenAnnotations, onlyWhenAllAnnotations) match {
+              case (Nil, Nil) => (None, None)
+              case (_, Nil) => (matchOnlyWhens(property, onlyWhenAnnotations, extractedPropertyValue), None)
+              case (Nil, _) => (None, matchOnlyWhenAlls(property, onlyWhenAllAnnotations, extractedPropertyValue))
+              case _ => (matchOnlyWhens(property, onlyWhenAnnotations, extractedPropertyValue), matchOnlyWhenAlls(property, onlyWhenAllAnnotations, extractedPropertyValue))
             }
 
             onlyWhenMismatch match {
-              case None =>
-                extractedPropertyValue
-              case Some(mismatch) =>
-                Left(List(ValidationError(propertyValueCursor.path, propertyValueCursor.json, mismatch)))
+              case (None, None) => extractedPropertyValue
+              case mismatches => validationError(propertyValueCursor, mismatches)
             }
           }
         val unexpectedProperties = if (context.ignoreUnexpectedProperties) Nil else values

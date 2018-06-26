@@ -1,8 +1,13 @@
 package fi.oph.scalaschema.annotation
 
 import fi.oph.scalaschema.{Metadata, Serializer}
-import org.json4s.{JValue, JsonAST}
 import org.json4s.JsonAST.{JNull, JString}
+import org.json4s.{JValue, JsonAST}
+
+case class OnlyWhenAll(path: String, value: Any) extends Metadata {
+  override def appendMetadataToJsonSchema(obj: JsonAST.JObject): JsonAST.JObject = appendToDescription(obj, s"(Only when $path = $value)")
+  def serializableForm = SerializableOnlyWhen(path, AnyToJson.anyToJValue(value))
+}
 
 case class OnlyWhen(path: String, value: Any) extends Metadata {
   override def appendMetadataToJsonSchema(obj: JsonAST.JObject): JsonAST.JObject = appendToDescription(obj, s"(Only when $path = $value)")
