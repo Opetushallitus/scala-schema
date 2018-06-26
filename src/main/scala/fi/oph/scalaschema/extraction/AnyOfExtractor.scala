@@ -50,12 +50,6 @@ object AnyOfExtractor {
     case s: ClassSchema =>
       val discriminatorProps: List[Property] = s.properties.filter(_.metadata.contains(Discriminator()))
 
-      val onlyWhens: List[DiscriminatorCriterion] = s.metadata.collect({ case o:OnlyWhen => o}) match {
-        case Nil => Nil
-        case onlyWhens =>
-          List(OnlyWhenCriteria(keyPath, onlyWhens.map(_.serializableForm)))
-      }
-
       val criteria = discriminatorProps match {
         case Nil =>
           NoOtherPropertiesThan(keyPath, s.properties.map(_.key)) :: (s.properties.flatMap(propertyMatchers(contextPath, keyPath, _)))
@@ -63,7 +57,7 @@ object AnyOfExtractor {
           props.flatMap(propertyMatchers(contextPath, keyPath, _))
       }
 
-      AllOfCriterion(criteria ++ onlyWhens)
+      AllOfCriterion(criteria ++ collectOnlyWhens(keyPath, s) ++ collectOnlyWhenAlls(keyPath, s))
     case s: FlattenedSchema => AllOfCriterion(List(Flattened(keyPath, s, discriminatorCriteria(contextPath, s.property.schema, keyPath))))
     case s: NumberSchema => IsNumeric(keyPath, s)
     case s: StringSchema => IsString(keyPath, s)
@@ -71,6 +65,22 @@ object AnyOfExtractor {
     case s: DateSchema => IsDate(keyPath, s)
     case s: ListSchema => IsArray(keyPath, s)
     case _ => throw new RuntimeException(s"Unsupported alternative schema in AnyOfSchema: ${schema}")
+  }
+
+  private def collectOnlyWhens(keyPath: KeyPath, s: ClassSchema) = {
+    s.metadata.collect({ case o: OnlyWhen => o }) match {
+      case Nil => Nil
+      case onlyWhens =>
+        List(OnlyWhenCriteria(keyPath, onlyWhens.map(_.serializableForm)))
+    }
+  }
+
+  private def collectOnlyWhenAlls(keyPath: KeyPath, s: ClassSchema) = {
+    s.metadata.collect({ case o: OnlyWhenAll => o }) match {
+      case Nil => Nil
+      case onlyWhensAlls =>
+        List(OnlyWhenAllCriteria(keyPath, onlyWhensAlls.map(_.serializableForm)))
+    }
   }
 
   private def propertyMatchers(contextPath: String, keyPath:KeyPath, property: Property)(implicit context: ExtractionContext): List[DiscriminatorCriterion] = {
@@ -225,6 +235,27 @@ object AnyOfExtractor {
 
     override def description: String = {
       criteria.map { case SerializableOnlyWhen(path, value) => s"${path}=${JsonMethods.compact(value)}" }.mkString(" or ")
+    }
+  }
+
+  case class OnlyWhenAllCriteria(val keyPath: KeyPath, criteria: List[SerializableOnlyWhen]) extends DiscriminatorCriterion {
+    def weight = 10000
+
+    def apply(json: JsonCursor)(implicit context: ExtractionContext): List[String] = {
+      val valueAtKeyPath = keyPath(json)
+      val found = criteria.forall { case SerializableOnlyWhen(path, value) =>
+        val valueAtExpectedPosition = valueAtKeyPath.navigate(path).json
+        JsonCompare.equals(valueAtExpectedPosition, value)
+      }
+      if (found) {
+        Nil
+      } else {
+        List(description)
+      }
+    }
+
+    override def description: String = {
+      criteria.map { case SerializableOnlyWhen(path, value) => s"${path}=${JsonMethods.compact(value)}" }.mkString(" and ")
     }
   }
 
