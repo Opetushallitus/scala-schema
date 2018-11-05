@@ -12,7 +12,8 @@
   </organization>
   <properties>
       <scala.version>2.12.4</scala.version>
-      <json4s.version>3.5.0</json4s.version>
+      <json4s.version>3.6.2</json4s.version>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
     <dependency>
@@ -33,7 +34,7 @@
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
-      <version>0.9.10</version>
+      <version>0.9.11</version>
     </dependency>
     <dependency>
       <groupId>org.json4s</groupId>
@@ -51,11 +52,6 @@
       <version>${json4s.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.12</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>3.3.2</version>
@@ -64,19 +60,19 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_2.12</artifactId>
-      <version>3.0.1</version>
+      <version>3.0.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.github.fge</groupId>
       <artifactId>json-schema-validator</artifactId>
-      <version>2.2.6</version>
+      <version>2.2.8</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -85,6 +81,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0-M1</version>
         <executions>
           <execution>
             <id>enforce-versions</id>
@@ -104,6 +101,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
+        <version>3.3.1</version>
         <executions>
           <execution>
             <id>scala-compile-first</id>
