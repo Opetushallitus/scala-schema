@@ -13,6 +13,7 @@
   <properties>
       <scala.version>2.12.4</scala.version>
       <json4s.version>3.6.2</json4s.version>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
     <dependency>
@@ -85,6 +86,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0-M1</version>
         <executions>
           <execution>
             <id>enforce-versions</id>
@@ -104,6 +106,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
+        <version>3.3.1</version>
         <executions>
           <execution>
             <id>scala-compile-first</id>
