@@ -132,3 +132,9 @@ case class ReadableFromTwoStrings(value: String, value2: String)
 
 trait MaybeReadableFromString
 case class OtherCase(number: Int) extends MaybeReadableFromString
+
+trait BaseTrait
+object BaseTrait {
+  case object Sub1 extends BaseTrait
+  case object Sub2 extends BaseTrait
+}

@@ -236,12 +236,11 @@ case class SchemaFactory() {
   }
 
   private def findTraits(tpe: ru.Type) = {
-    tpe.baseClasses
-      .map(_.fullName)
-      .filter(!List("scala.Any").contains(_))
-      .map(typeByName)
-      .filter {_.typeSymbol.asClass.isTrait}
-      .filterNot {_ == tpe}
+    tpe
+      .baseClasses
+      .filter(x => x.fullName != "scala.Any")
+      .map(_.asType.info)
+      .filter(x => x.typeSymbol.asClass.isTrait && x != tpe)
   }
 
   private def applyMetadataFromClassAndTraits[T <: ObjectWithMetadata[T]](tpe: ru.Type, schema: T): T =

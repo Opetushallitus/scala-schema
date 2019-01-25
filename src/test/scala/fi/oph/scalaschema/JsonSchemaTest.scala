@@ -83,6 +83,9 @@ class JsonSchemaTest extends FreeSpec with Matchers {
       "works for fields" in {
         jsonSchemaOf(classOf[TraitsInFields]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traits"}},"id":"#traitsinfields","additionalProperties":false,"title":"Traits in fields","required":["field"],"definitions":{"impla":{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},"implb":{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"},"traits":{"anyOf":[{"$ref":"#/definitions/impla"},{"$ref":"#/definitions/implb"}]}}}""")
       }
+      "generate schema for subtypes defined in an object" in {
+        jsonSchemaOf(classOf[BaseTrait]) should equal("""{"anyOf":[{"$ref":"#/definitions/sub1"},{"$ref":"#/definitions/sub2"}],"definitions":{"sub1":{"type":"object","properties":{},"id":"#sub1","additionalProperties":false,"title":"Sub1"},"sub2":{"type":"object","properties":{},"id":"#sub2","additionalProperties":false,"title":"Sub2"}}}""")
+      }
     }
     "JValues" - {
       "JValue" in {
