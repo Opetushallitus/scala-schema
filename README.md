@@ -205,6 +205,15 @@ Add Jitpack.io resolver:
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
     libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.23.0_2.12"
+g 
+### Developing scala-schema
+
+Project is built and tested with Maven. So `mvn install` will do the job.
+
+There are separate branches for scala versions. The active development branch is `scala-2.12`.
+
+A new "release" is created simply by tagging. For instance, to release the current head as version 2.25.0 (an already 
+released version)for scala 2.12, you would do `git tag 2.25.0_2.12 && git push --tags`. 
 
 ### TODO
 
