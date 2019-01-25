@@ -1,8 +1,11 @@
 package fi.oph.scalaschema
 
-import java.time.LocalDate
+import java.sql.Timestamp
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
+import java.util.Date
 
 import fi.oph.scalaschema.annotation._
+import org.joda.time.DateTime
 import org.json4s.JValue
 
 case class RequiredFields(field: Boolean)
@@ -14,10 +17,13 @@ case class StringsWithDefault(@DefaultValue("hello") field: String)
 case class NumbersWithDefault(@DefaultValue(1) field: Int)
 case class Numbers(a: Int, b: Long, c: Float, d: Double)
 case class Strings(s: String)
-case class Dates(d: LocalDate)
+case class Dates(a: LocalDate, b: ZonedDateTime, c: Date, d: Timestamp, e: DateTime, f: LocalDateTime)
 case class Lists(things: List[Int])
+case class Seqs(things: Seq[Int])
+case class Arrays(things: Array[Int])
 case class Objects(x: Strings)
 case class NestedDefinitions(x: Objects)
+case class Maps(things: Map[String, Int])
 
 @Description("Boom boom boom")
 case class WithDescription()
@@ -42,7 +48,9 @@ case class WithMaxMinValueExclusive(@MinValueExclusive(1) @MaxValueExclusive(2) 
 case class WithRegEx(@RegularExpression("^(19|20)\\d\\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$") date: String)
 case class WithSyntheticProperties() {
   @SyntheticProperty
-  def field: Boolean = true
+  def field1: Boolean = true
+  @SyntheticProperty
+  def field2: List[Boolean] = List(true)
 }
 
 case class WithTraitWithSyntheticProperties() extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties
@@ -93,3 +101,34 @@ trait WithEnumerableFieldsAB {
 }
 case class WithEnumValue(@EnumValue("a") a: String, b: Option[String], @EnumValue("c") c: List[String]) extends WithEnumerableFieldsAB
 case class WithJValue(x: JValue)
+
+trait MaybeFlattened
+@Flatten
+case class FlattenedNumber(value: Int) extends MaybeFlattened
+@Flatten
+case class FlattenedString(value: String) extends MaybeFlattened
+@Flatten
+case class FlattenedDate(value: LocalDate) extends MaybeFlattened
+@Flatten
+case class FlattenedBoolean(value: Boolean) extends MaybeFlattened
+@Flatten
+case class FlattenedObject(value: RequiredFields) extends MaybeFlattened
+@Flatten
+case class FlattenedList(values: List[Int]) extends MaybeFlattened
+case class WithMoreData(value: Int, description: String) extends MaybeFlattened
+
+@Flatten
+case class Flattened2Fields(a: Int, b: Int)
+
+@ReadFlattened
+case class ReadableFromString(
+  @EnumValue("hello")
+  value: String,
+  description: Option[String]
+) extends MaybeReadableFromString
+
+@ReadFlattened
+case class ReadableFromTwoStrings(value: String, value2: String)
+
+trait MaybeReadableFromString
+case class OtherCase(number: Int) extends MaybeReadableFromString

@@ -1,5 +1,6 @@
 package fi.oph.scalaschema
 
+import fi.oph.scalaschema.annotation.EnumValue
 import org.json4s.JsonAST
 import org.json4s.JsonAST.{JNothing, JObject, JString}
 
@@ -30,14 +31,8 @@ trait JsonMetadataSupport {
     obj.merge(JObject("description" -> JString(description)))
   }
 
-  def addEnumValue(value: String, p: Property): Property = {
-    val newSchema = p.schema match {
-      case StringSchema(enumValues) =>
-        StringSchema(Some(enumValues.toList.flatten ++ List(value)))
-      case x: Any => throw new RuntimeException("Unexpected schema: " + x)
-
-    }
-    p.copy(schema = newSchema)
+  def addEnumValue(value: Any, p: Property): Property = {
+    p.copy(schema = EnumValue.addEnumValues(p.schema, List(value)))
   }
 }
 

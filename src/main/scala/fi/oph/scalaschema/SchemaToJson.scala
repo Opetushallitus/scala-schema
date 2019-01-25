@@ -19,15 +19,17 @@ object SchemaToJson {
   }
 
   private def toJsonSchemaWithoutMetadata(t: Schema): JObject = t match {
-    case DateSchema(enumValues) => JObject(List("type" -> JString("string"), "format" -> JString("date")) ++ toEnumValueProperty(enumValues))
+    case DateSchema(_) => JObject(List("type" -> JString("string"), "format" -> JString("date")))
     case StringSchema(enumValues) => withMinLength(simpleObjectToJson("string", enumValues), Some(1))
     case BooleanSchema(enumValues) => simpleObjectToJson("boolean", enumValues)
     case NumberSchema(_, enumValues) => simpleObjectToJson("number", enumValues)
-    case ListSchema(x) => JObject(("type") -> JString("array"), (("items" -> toJsonSchema(x))))
+    case ListSchema(x) => JObject("type" -> JString("array"), ("items" -> toJsonSchema(x)))
+    case MapSchema(x) => JObject("type" -> JString("object"), ("patternProperties" -> JObject(".*" -> toJsonSchema(x))))
     case OptionalSchema(x) => toJsonSchemaWithoutMetadata(x)
     case t: ClassRefSchema => JObject(
       ("$ref" -> JString("#/definitions/" + t.simpleName))
     )
+    case s: ClassSchema if s.readFlattened.isDefined => toJsonSchemaWithoutMetadata(s.asAnyOfSchema)
     case t: ClassSchema => JObject(List(
       ("type" -> JString("object")),
       ("properties" -> toJsonProperties(t.properties)))
@@ -41,7 +43,10 @@ object SchemaToJson {
     case AnyOfSchema(alternatives, _, _, definitions) => JObject(
       List("anyOf" -> JArray(alternatives.map(toJsonSchemaWithoutMetadata(_)))) ++ toDefinitionProperty(definitions).toList
     )
+    case FlattenedSchema(classSchema, property) => toJsonSchemaWithoutMetadata(property.schema)
     case AnySchema() => JObject()
+    case AnyObjectSchema() => JObject("type" -> JString("object"))
+    case AnyListSchema() => JObject("type" -> JString("array"))
   }
 
   private def simpleObjectToJson(tyep: String, enumValues: Option[List[Any]]): JObject = {

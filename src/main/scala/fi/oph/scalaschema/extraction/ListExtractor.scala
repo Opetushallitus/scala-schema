@@ -6,16 +6,16 @@ import org.json4s.JsonAST.JArray
 import org.json4s._
 
 object ListExtractor {
-  def extractList(json: JValue, as: ListSchema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = json match {
-    case JArray(values) =>
+  def extractList(cursor: JsonCursor, ls: ListSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = cursor.json match {
+    case a@JArray(values) =>
       val valueResults: List[Either[List[ValidationError], Any]] = values.zipWithIndex.map {
         case (itemJson, index) =>
-          SchemaValidatingExtractor.extract(itemJson, as.itemSchema, metadata)(context.subContext(index.toString), rootSchema)
+          SchemaValidatingExtractor.extract(cursor.subCursor(itemJson, index.toString), ls.itemSchema, metadata)
       }
 
-      val metadataValidationErrors: List[ValidationError] = context.ifValidating((as.metadata ++ metadata).collect {
-        case MinItems(minItems) if values.length < minItems => ValidationError(context.path, json, LessThanMinimumNumberOfItems(minItems))
-        case MaxItems(maxItems) if values.length > maxItems => ValidationError(context.path, json, MoreThanMaximumNumberOfItems(maxItems))
+      val metadataValidationErrors: List[ValidationError] = context.ifValidating((ls.metadata ++ metadata).collect {
+        case MinItems(minItems) if values.length < minItems => ValidationError(cursor.path, cursor.json, LessThanMinimumNumberOfItems(minItems))
+        case MaxItems(maxItems) if values.length > maxItems => ValidationError(cursor.path, cursor.json, MoreThanMaximumNumberOfItems(maxItems))
       })
 
       val errors: List[ValidationError] = valueResults.collect { case Left(errors) => errors }.flatten ++ metadataValidationErrors
@@ -24,6 +24,6 @@ object ListExtractor {
         case Nil => Right(valueResults.map(_.right.get))
         case _ => Left(errors)
       }
-    case _ => Left(List(ValidationError(context.path, json, UnexpectedType("array"))))
+    case _ => Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("array"))))
   }
 }

@@ -1,12 +1,14 @@
 ## scala-schema
 
+[![Build Status](https://travis-ci.org/Opetushallitus/scala-schema.svg?branch=scala-2.12)](https://travis-ci.org/Opetushallitus/scala-schema)
+
 Generate a [JSON schema](http://json-schema.org/) from Scala classes 
 
 - Create a Schema object from any `case class`
 - Export the schema as JSON
 - Use the schema object directly for efficient [JSON Validation and extraction into Scala objects](#validation-and-extraction), with machine and human-friendly validation error messages.
 - [Serialize Scala objects](#serialization) into JSON. Do this way faster than with json4s serialization mechanism.
-- Supports case classes, lists, strings, dates, numbers, booleans
+- Supports case classes, lists, strings, dates, numbers, booleans and maps (when keys are strings)
 - Supports polymorphism via traits: finds trait implementations in same package
 - Customize schema with annotations (like min/max size, description)
 
@@ -46,12 +48,11 @@ case class AnnotatedCat(
 )
 ```
 
-You can add support for your custom annotations too, if you wish. Like
+You can add your custom annotations too, if you wish. Like
 
 ```scala
 object ExampleWithCustomAnnotations extends App {
-  val annotations = classOf[ReadOnly] :: SchemaFactory.defaultAnnotations
-  val schema: Schema = SchemaFactory(annotations).createSchema[AnnotatedCat]
+  val schema: Schema = SchemaFactory.default.createSchema[AnnotatedCat]
   val schemaAsJson: JValue = schema.toJson
   val schemaAsString = JsonMethods.pretty(schemaAsJson)
   println(schemaAsString)
@@ -117,6 +118,8 @@ case class ValidationTestClass(name: String, stuff: List[Int])
 The `ExtractionContext` object created in the example above is used by the `scala-schema` extraction mechanism to cache
 some information to make subsequent extractions faster. Hence it makes sense to store this object in a variable.
 
+More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/ValidationAndExtractionTest.scala)
+
 ### Serialization
 
 Use your schema to serialize your Scala objects into JSON. This is more efficient than using then json4s serialization, because we're
@@ -145,7 +148,7 @@ object CustomSerializationExample extends App {
 }
 ```
 
-In the above example, all fields with the name "age" are hidden.
+In the above example, all fields with the name "age" are hidden. More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/SerializationSpec.scala).
 
 ### Schemas and Factories
 
@@ -188,7 +191,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.8.0_2.12</version>
+    <version>2.23.0_2.12</version>
   </dependency>
 </dependencies>
 ```
@@ -201,4 +204,18 @@ Add Jitpack.io resolver:
 
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
-    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.8.0_2.12"
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.23.0_2.12"
+g 
+### Developing scala-schema
+
+Project is built and tested with Maven. So `mvn install` will do the job.
+
+There are separate branches for scala versions. The active development branch is `scala-2.12`.
+
+A new "release" is created simply by tagging. For instance, to release the current head as version 2.25.0 (an already 
+released version)for scala 2.12, you would do `git tag 2.25.0_2.12 && git push --tags`. 
+
+### TODO
+
+- Support case classes with type parameters
+- Improve error messages of SchemaFactory: include path in all error messages
