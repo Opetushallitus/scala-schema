@@ -23,12 +23,7 @@ trait AnnotationSupport[M] {
 
 trait JsonMetadataSupport {
   def appendToDescription(obj: JObject, newDescription: String): JsonAST.JObject = {
-    val description = obj.\("description") match {
-      case JString(s) if s.endsWith(".") => s + " " + newDescription
-      case JString(s) => s + ". " + newDescription
-      case JNothing => newDescription
-    }
-    obj.merge(JObject("description" -> JString(description)))
+    obj.merge(JObject("description" -> JString(newDescription)))
   }
 
   def addEnumValue(value: Any, p: Property): Property = {
