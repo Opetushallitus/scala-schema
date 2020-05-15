@@ -12,7 +12,7 @@
   </organization>
   <properties>
       <scala.version>2.12.4</scala.version>
-      <json4s.version>3.6.2</json4s.version>
+      <json4s.version>3.6.7</json4s.version>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
