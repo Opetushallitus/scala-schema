@@ -82,6 +82,7 @@ case class SchemaFactory() {
               createClassOrTraitSchema(tpe, state, true)
             case Some(f: Flatten) =>
               createFlattenedSchema(tpe, state)
+            case _ => throw new RuntimeException("Unsupported type: " + tpe)
           }
         } else {
           throw new RuntimeException("Unsupported type: " + tpe)
@@ -196,7 +197,7 @@ case class SchemaFactory() {
     val properties: List[Property] = propertySymbols.map { case (paramSymbol, synthetic) =>
       val term = paramSymbol.asTerm
       val termSchema = createSchema(term.typeSignature, state.childState)
-      val termName: String = term.name.decoded.trim
+      val termName: String = term.name.decodedName.toString.trim
       val ownerTrait = paramSymbol.owner.isAbstract match {
         case true =>
           Some(paramSymbol.owner)
@@ -352,9 +353,9 @@ object Annotations {
     val annotationClass = Class.forName(annotationSymbol.asClass.fullName)
     val constructor: Constructor[_] = annotationClass.getConstructors()(0)
 
-    def parseAsDouble(v: Any) = new lang.Double(v.toString.toDouble)
-    def parseAsInteger(v: Any) = new lang.Integer(v.toString.toDouble.toInt)
-    def parseAsBoolean(v: Any) = new lang.Boolean(v.toString.toBoolean)
+    def parseAsDouble(v: Any) = Double.box(v.toString.toDouble)
+    def parseAsInteger(v: Any) = Integer.valueOf(v.toString.toDouble.toInt)
+    def parseAsBoolean(v: Any) = Boolean.box(v.toString.toBoolean)
 
     def parseAnnotationParam(klass: Class[_], value: ru.Tree): AnyRef = (klass, value) match {
       case (_, value) if (value.toString.startsWith("\"")) => unescapeJava(value)
