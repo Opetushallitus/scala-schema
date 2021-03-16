@@ -64,7 +64,7 @@ object Serializer {
   }
 
   private def serializeMap(s: MapSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
-    case xs: Map[String, _] => JObject(xs.toList.map { case (key, value) => JField(key, serializeWithSchema(value, s.itemSchema))})
+    case xs: Map[_, _] => JObject(xs.toList.map { case (key, value) => JField(key.asInstanceOf[String], serializeWithSchema(value, s.itemSchema))})
     case _ => throw new RuntimeException("Not a Map: " + x)
   }
 

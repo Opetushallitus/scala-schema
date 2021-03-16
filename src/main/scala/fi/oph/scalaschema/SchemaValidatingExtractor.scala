@@ -52,6 +52,7 @@ object SchemaValidatingExtractor {
             case (_, cs: ClassRefSchema) => extract(cursor, cs.resolve(context.schemaFactory), metadata)
             case (_, cs: ClassSchema) => ObjectExtractor.extractObject(cursor, cs, metadata)
             case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(cursor, as, metadata)
+            case _ => throw new RuntimeException(s"Unexpected schema type ${schema}")
           }
         case _ => throw new RuntimeException(s"Unexpected schema type ${schema}")
       }}
