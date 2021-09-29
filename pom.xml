@@ -53,8 +53,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.12.0</version>
+      <artifactId>commons-text</artifactId>
+      <version>1.9</version>
     </dependency>
     <!-- test deps -->
     <dependency>

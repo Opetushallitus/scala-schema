@@ -1,6 +1,5 @@
 package fi.oph.scalaschema
 
-import java.lang
 import java.lang.reflect.Constructor
 import java.sql.Timestamp
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
@@ -8,9 +7,8 @@ import java.util.Date
 
 import fi.oph.scalaschema.Annotations.findAnnotations
 import fi.oph.scalaschema.annotation._
-import org.apache.commons.lang3.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 import org.joda.time.DateTime
-import org.json4s.scalap.scalasig.ClassSymbol
 import org.reflections.Reflections
 
 import scala.annotation.StaticAnnotation
