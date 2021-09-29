@@ -10,11 +10,12 @@ import fi.oph.scalaschema.extraction.{ValidationError, _}
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST._
 import org.json4s.jackson.JsonMethods
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.reflect.runtime.{universe => ru}
 
-class ValidationAndExtractionTest extends FreeSpec with Matchers {
+class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
   "Validation and extraction" - {
     "Simple example" - {
       "Extraction" in {

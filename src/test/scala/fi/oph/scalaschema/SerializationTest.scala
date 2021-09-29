@@ -3,15 +3,15 @@ package fi.oph.scalaschema
 import java.sql.Timestamp
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
-
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString}
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.reflect.runtime.{universe => ru}
 
-class SerializationTest extends FreeSpec with Matchers {
+class SerializationTest extends AnyFreeSpec with Matchers {
   "strings" - {
     testSerialization(Strings("a"), """{"s":"a"}""")
   }

@@ -9,11 +9,12 @@ import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
 import org.json4s.{JArray, JValue}
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.reflect.runtime.universe.TypeTag
 
-class JsonSchemaTest extends FreeSpec with Matchers {
+class JsonSchemaTest extends AnyFreeSpec with Matchers {
   "Simple example" - {
     val schema = SchemaFactory.default.createSchema(classOf[TestClass])
     val expectedClassSchema = ClassSchema("fi.oph.scalaschema.TestClass", List(
