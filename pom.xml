@@ -102,6 +102,16 @@
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
         <version>4.5.4</version>
+        <configuration>
+          <args>
+            <arg>-unchecked</arg>
+            <arg>-deprecation</arg>
+            <arg>-feature</arg>
+            <arg>-Ywarn-dead-code</arg>
+            <arg>-Xlint:missing-interpolator</arg>
+            <arg>-Xfatal-warnings</arg>
+          </args>
+        </configuration>
         <executions>
           <execution>
             <id>scala-compile-first</id>
