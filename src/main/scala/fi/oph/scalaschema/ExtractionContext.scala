@@ -15,7 +15,8 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
                              validate: Boolean = true,
                              ignoreUnexpectedProperties: Boolean = false,
                              allowEmptyStrings: Boolean = true,
-                             criteriaCache: collection.mutable.Map[String, DiscriminatorCriterion] = collection.mutable.Map.empty) {
+                             criteriaCache: collection.mutable.Map[String, DiscriminatorCriterion] = collection.mutable.Map.empty,
+                             ignoreNonValidatingListItems: Boolean = false) {
   def hasSerializerFor(schema: SchemaWithClassName) = customSerializerFor(schema).isDefined
   def customSerializerFor(schema: SchemaWithClassName) = customDeserializers.find(_.isApplicable(schema))
   def ifValidating(errors: => List[ValidationError]) = if (validate) { errors } else { Nil }

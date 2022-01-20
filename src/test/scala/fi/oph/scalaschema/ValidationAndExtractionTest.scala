@@ -42,6 +42,17 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
           verifyValidation[TestClass](inputWithExtraField, Right(TestClass("john", List(1))), ExtractionContext(SchemaFactory.default, ignoreUnexpectedProperties = true))
         }
       }
+      "Unexpected non-validating list items" - {
+        val inputWithExtraNonValidatingListItem = JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1), JBool(true)))))
+        "Cause errors in default/strict mode" in {
+          verifyValidation[TestClass](inputWithExtraNonValidatingListItem, Left(List(
+            ValidationError("stuff.1",JBool(true),UnexpectedType("number"))
+          )))
+        }
+        "Are ignored in loose mode" in {
+          verifyValidation[TestClass](inputWithExtraNonValidatingListItem, Right(TestClass("john", List(1))), ExtractionContext(SchemaFactory.default, ignoreNonValidatingListItems = true))
+        }
+      }
       "Field type validation" in {
         verifyValidation[TestClass](JObject(("name" -> JObject()), ("stuff", JArray(List(JString("a"), JString("b"))))), Left(List(
           ValidationError("name",JObject(),UnexpectedType("string")),
