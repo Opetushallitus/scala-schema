@@ -11,7 +11,7 @@ object ListExtractor {
       val valueResults: List[Either[List[ValidationError], Any]] = values.zipWithIndex.map {
         case (itemJson, index) =>
           SchemaValidatingExtractor.extract(cursor.subCursor(itemJson, index.toString), ls.itemSchema, metadata)
-      }
+      }.filter(_.isRight || !context.ignoreNonValidatingListItems)
 
       val metadataValidationErrors: List[ValidationError] = context.ifValidating((ls.metadata ++ metadata).collect {
         case MinItems(minItems) if values.length < minItems => ValidationError(cursor.path, cursor.json, LessThanMinimumNumberOfItems(minItems))
