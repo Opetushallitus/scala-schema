@@ -2,13 +2,15 @@ package fi.oph.scalaschema.extraction
 
 import fi.oph.scalaschema.annotation.RegularExpression
 import fi.oph.scalaschema._
-import org.json4s.JsonAST.{JNumber, JString}
 import org.json4s._
 
 object StringExtractor extends ExtractorWithDefaultValueSupport[String, StringSchema]{
   def extractExisting(cursor: JsonCursor, ss: StringSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], String] = cursor.json match {
     case JString(stringValue) => validateString(stringValue, cursor, ss, metadata)
-    case v: JNumber => validateString(v.values.toString, cursor, ss, metadata)
+    case v: JDouble => validateString(v.values.toString, cursor, ss, metadata)
+    case v: JDecimal => validateString(v.values.toString, cursor, ss, metadata)
+    case v: JLong => validateString(v.values.toString, cursor, ss, metadata)
+    case v: JInt => validateString(v.values.toString, cursor, ss, metadata)
     case JBool(b) => validateString(b.toString, cursor, ss, metadata)
     case _ => Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("string"))))
   }

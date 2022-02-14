@@ -125,9 +125,9 @@ case class SchemaFactory() {
     "java.math.BigDecimal" -> NumberSchema(numberType = classOf[java.math.BigDecimal]),
     classOf[BigDecimal].getName -> NumberSchema(numberType = classOf[BigDecimal]),
     classOf[BigInt].getName -> NumberSchema(numberType = classOf[BigInt]),
-    "org.json4s.JsonAST.JValue" -> AnySchema(),
-    "org.json4s.JsonAST.JObject" -> AnyObjectSchema(),
-    "org.json4s.JsonAST.JArray" -> AnyListSchema()
+    "org.json4s.JValue" -> AnySchema(),
+    "org.json4s.JObject" -> AnyObjectSchema(),
+    "org.json4s.JArray" -> AnyListSchema()
   )
 
   private def addToState(tyep: SchemaWithClassName, state: ScanState) = {
