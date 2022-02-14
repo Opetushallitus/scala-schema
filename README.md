@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/Opetushallitus/scala-schema.svg?branch=scala-2.12)](https://travis-ci.org/Opetushallitus/scala-schema)
 
-Generate a [JSON schema](http://json-schema.org/) from Scala classes 
+Generate a [JSON schema](http://json-schema.org/) from Scala classes
 
 - Create a Schema object from any `case class`
 - Export the schema as JSON
@@ -156,17 +156,17 @@ Now that you've read this far, I'll share some thoughts on schemas and factories
 
 A `Schema` represents your object model and can be exported as a JSON schema as described above. Schemas are typically created
 automatically from your case classes using a `SchemaFactory`. As shown above, you can use annotations to customize how a schema is created,
-and also pass information about your custom annotations to your `SchemaFactory`. 
+and also pass information about your custom annotations to your `SchemaFactory`.
 
-The factory will *cache the created schemas* so that
-subsequent requests for a certain schema will be super fast. Therefore you should store your schema factory in a variable, 
+The factory will _cache the created schemas_ so that
+subsequent requests for a certain schema will be super fast. Therefore you should store your schema factory in a variable,
 but you don't need to store the individual schemas.
 
 ### How to use as dependency
 
 The `scala-schema` library is currently maintained in two branches for scala versions 2.11 and 2.12.
 
-It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to 
+It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to
 depend on it anyway. Just follow the instructions below.
 
 #### Maven
@@ -191,7 +191,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.23.0_2.12</version>
+    <version>2.27.1_2.12</version>
   </dependency>
 </dependencies>
 ```
@@ -204,16 +204,16 @@ Add Jitpack.io resolver:
 
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
-    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.23.0_2.12"
-g 
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.27.1_2.12"
+
 ### Developing scala-schema
 
 Project is built and tested with Maven. So `mvn install` will do the job.
 
 There are separate branches for scala versions. The active development branch is `scala-2.12`.
 
-A new "release" is created simply by tagging. For instance, to release the current head as version 2.25.0 (an already 
-released version)for scala 2.12, you would do `git tag 2.25.0_2.12 && git push --tags`. 
+A new "release" is created simply by tagging. For instance, to release the current head as version 2.25.0 (an already
+released version)for scala 2.12, you would do `git tag 2.25.0_2.12 && git push --tags`.
 
 ### TODO
 
