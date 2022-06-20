@@ -24,15 +24,15 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
       }
       "Missing fields validation" in {
         verifyValidation[TestClass](JObject(), Left(List(
-          ValidationError("name",JNothing,MissingProperty()),
-          ValidationError("stuff",JNothing,MissingProperty())
+          ValidationError("name",JNothing, MissingProperty()),
+          ValidationError("stuff",JNothing, MissingProperty())
         )))
       }
       "Unexpected fields" - {
         val inputWithExtraField = JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1)))), ("extra" -> JString("hello")))
         "Cause errors in default/strict mode" in {
           verifyValidation[TestClass](inputWithExtraField, Left(List(
-            ValidationError("extra",JString("hello"),UnexpectedProperty())
+            ValidationError("extra", JString("hello"), UnexpectedProperty())
           )))
         }
         "Are ignored if value is null" in {
@@ -46,7 +46,7 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         val inputWithExtraNonValidatingListItem = JObject(("name" -> JString("john")), ("stuff" -> JArray(List(JInt(1), JBool(true)))))
         "Cause errors in default/strict mode" in {
           verifyValidation[TestClass](inputWithExtraNonValidatingListItem, Left(List(
-            ValidationError("stuff.1",JBool(true),UnexpectedType("number"))
+            ValidationError("stuff.1", JBool(true), UnexpectedType("number"))
           )))
         }
         "Are ignored in loose mode" in {
@@ -55,9 +55,9 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
       }
       "Field type validation" in {
         verifyValidation[TestClass](JObject(("name" -> JObject()), ("stuff", JArray(List(JString("a"), JString("b"))))), Left(List(
-          ValidationError("name",JObject(),UnexpectedType("string")),
-          ValidationError("stuff.0",JString("a"),UnexpectedType("number")),
-          ValidationError("stuff.1",JString("b"),UnexpectedType("number"))
+          ValidationError("name", JObject(), UnexpectedType("string")),
+          ValidationError("stuff.0", JString("a"), UnexpectedType("number")),
+          ValidationError("stuff.1", JString("b"), UnexpectedType("number"))
         )))
       }
     }
@@ -165,7 +165,9 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         verifyExtractionRoundTrip(Maps(Map("x" -> 1)))
       }
       "Only String supported as key type" in {
-        val msg = intercept[IllegalArgumentException] { SchemaFactory.default.createSchema[Map[Int, String]] }.getMessage
+        val msg = intercept[IllegalArgumentException] {
+          SchemaFactory.default.createSchema[Map[Int, String]]
+        }.getMessage
         msg should equal("Maps are only supported with String keys")
       }
       "When validation of nested data fails" in {
@@ -291,7 +293,7 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
 
         "Allows null-checking by using None as value" in {
           verifyValidation[FieldOkIfParentMissing](JObject("field" -> JString("hello")), Right(FieldOkIfParentMissing(Some("hello"))))
-          verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Left(List(ValidationError("thing.field",JString("hello"),OnlyWhenMismatch(List(SerializableOnlyWhen("..",JNull)))))))
+          verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Left(List(ValidationError("thing.field", JString("hello"), OnlyWhenMismatch(List(SerializableOnlyWhen("..", JNull)))))))
           verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject()), Right(WrapperForTraitOkIfParentMissing(FieldOkIfParentMissing(None))))
         }
       }
@@ -324,6 +326,131 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
           verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject("number" -> JInt(1))), Left(List(ValidationError("thing", JObject("number" -> JInt(1)), expectedError))))
           verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject()), Right(WrapperForTraitWithParentRestrictions(DefaultAlt())))
         }
+      }
+    }
+    "@NotWhen annotation" - {
+      "When applied to fields" - {
+        "Allows field only when value does not match the array" in {
+          val expectedError = NotWhenMismatch(List(SerializableNotWhen("../number", JArray(List(JInt(1), JInt(2), JInt(3))))))
+          verifyValidation[NotWhenListFieldContainer](JObject("number" -> JInt(1), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenListFieldContainer](JObject("number" -> JInt(2), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenListFieldContainer](JObject("number" -> JInt(3), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenListFieldContainer](JObject("number" -> JInt(4), "thing" -> JObject("field" -> JString("bogus"))), Right(NotWhenListFieldContainer(4, WithNotWhenListFieldsInParent(Some("bogus")))))
+
+          val expectedError2 = NotWhenMismatch(List(SerializableNotWhen("../number", JArray(List(JInt(1))))))
+          verifyValidation[NotWhenSingleListFieldContainer](JObject("number" -> JInt(1), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError2))))
+        }
+
+        "Allows field only when value does not match the mixed array" in {
+          val expectedError = NotWhenMismatch(List(SerializableNotWhen("../number", JArray(List(JInt(1), JString("2"), JInt(3))))))
+          verifyValidation[NotWhenMixedListFieldContainer](JObject("number" -> JInt(1), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenMixedListFieldContainer](JObject("number" -> JString("2"), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenMixedListFieldContainer](JObject("number" -> JInt(3), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenMixedListFieldContainer](JObject("number" -> JInt(4), "thing" -> JObject("field" -> JString("bogus"))), Right(NotWhenMixedListFieldContainer(4, WithNotWhenMixedListFieldsInParent(Some("bogus")))))
+        }
+
+        "Allows field only when value does not match the single value" in {
+          val expectedError = NotWhenMismatch(List(SerializableNotWhen("../number", JInt(1))))
+          verifyValidation[NotWhenSingleElementFieldContainer](JObject("number" -> JInt(1), "thing" -> JObject("field" -> JString("bogus"))), Left(List(ValidationError("thing.field", JString("bogus"), expectedError))))
+          verifyValidation[NotWhenSingleElementFieldContainer](JObject("number" -> JInt(2), "thing" -> JObject("field" -> JString("bogus"))), Right(NotWhenSingleElementFieldContainer(2, WithNotWhenSingleElementFieldsInParent(Some("bogus")))))
+        }
+
+        "Works with @DefaultValue and multiple allowed alternatives" in {
+          val expectedError = NotWhenMismatch(List(SerializableNotWhen("code", JArray(List(JInt(1), JInt(2)))), SerializableNotWhen("code", JArray(List(JInt(3), JInt(4))))))
+          verifyValidation[WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("code" -> JInt(1), "field" -> JString("Something1")), Left(List(ValidationError("field", JString("Something1"), expectedError))))
+          verifyValidation[WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("code" -> JInt(2), "field" -> JString("Something2")), Left(List(ValidationError("field", JString("Something2"), expectedError))))
+          verifyValidation[WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("code" -> JInt(3), "field" -> JString("Something3")), Left(List(ValidationError("field", JString("Something3"), expectedError))))
+          verifyValidation[WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("code" -> JInt(4), "field" -> JString("Something4")), Left(List(ValidationError("field", JString("Something4"), expectedError))))
+          verifyValidation[WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues](JObject("code" -> JInt(5), "field" -> JString("Something")), Right(WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues(5, "Something")))
+        }
+
+        "Allows a value matching @DefaultValue even when @NotWhen says it's not ok" in {
+          verifyExtractionRoundTrip[WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues](WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues(4, "DefaultVal"))
+        }
+
+        "Allows null-checking by using None as value" in {
+          verifyValidation[FieldNotOkIfNotWhenParentMissing](JObject("field" -> JString("hello")), Left(List(ValidationError("field", JString("hello"), NotWhenMismatch(List(SerializableNotWhen("..", JNull)))))))
+          verifyValidation[WrapperForTraitOkIfNotWhenParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Right(WrapperForTraitOkIfNotWhenParentMissing(FieldNotOkIfNotWhenParentMissing(Some("hello")))))
+          verifyValidation[WrapperForTraitOkIfNotWhenParentMissing](JObject("thing" -> JObject()), Right(WrapperForTraitOkIfNotWhenParentMissing(FieldNotOkIfNotWhenParentMissing(None))))
+        }
+      }
+
+      "When applied to case classes" - {
+        "Matches the correct case class with a single @NotWhen annotation per case class" in {
+          verifyValidation[WrapperForNotWhenTraitWithRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitWithRestrictions(NotWhenAltA(), true, 1)))
+          verifyValidation[WrapperForNotWhenTraitWithRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(2), "field" -> JObject()), Right(WrapperForNotWhenTraitWithRestrictions(NotWhenAltA(), true, 2)))
+          verifyValidation[WrapperForNotWhenTraitWithRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(3), "field" -> JObject()), Right(WrapperForNotWhenTraitWithRestrictions(NotWhenAltA(), true, 3)))
+          verifyValidation[WrapperForNotWhenTraitWithRestrictions](JObject("allowAll" -> JBool(false), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitWithRestrictions(NotWhenAltD(), false, 1)))
+          verifyValidation[WrapperForNotWhenTraitWithRestrictions](JObject("allowAll" -> JBool(false), "value" -> JInt(2), "field" -> JObject()), Right(WrapperForNotWhenTraitWithRestrictions(NotWhenAltD(), false, 2)))
+          verifyValidation[WrapperForNotWhenTraitWithRestrictions](JObject("allowAll" -> JBool(false), "value" -> JInt(3), "field" -> JObject()), Right(WrapperForNotWhenTraitWithRestrictions(NotWhenAltD(), false, 3)))
+        }
+
+        "Matches the correct case class with multiple @NotWhen annotations per case class" in {
+          verifyValidation[WrapperForNotWhenTraitWithMultipleRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleRestrictions(NotWhenAltG(), true, 1)))
+          verifyValidation[WrapperForNotWhenTraitWithMultipleRestrictions](JObject("allowAll" -> JBool(false), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleRestrictions(NotWhenAltF(), false, 1)))
+          verifyValidation[WrapperForNotWhenTraitWithMultipleRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(2), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleRestrictions(NotWhenAltB(), true, 2)))
+          verifyValidation[WrapperForNotWhenTraitWithMultipleRestrictions](JObject("allowAll" -> JBool(false), "value" -> JInt(2), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleRestrictions(NotWhenAltH(), false, 2)))
+          verifyValidation[WrapperForNotWhenTraitWithMultipleRestrictions](JObject("allowAll" -> JBool(false), "value" -> JInt(3), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleRestrictions(NotWhenAltE(), false, 3)))
+        }
+
+        "Matches one case class with @NotWhen, one or more case classes with @OnlyWhen, and one or more case classes without annotations" in {
+          verifyValidation[WrapperForNotWhenTraitWithMultipleDifferentAnnotations](JObject("allowAll" -> JBool(true), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleDifferentAnnotations(NotWhenMultiB(), true ,1)))
+          verifyValidation[WrapperForNotWhenTraitWithMultipleDifferentAnnotations](JObject("allowAll" -> JBool(false), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleDifferentAnnotations(NotWhenMultiB(), false ,1)))
+          verifyValidation[WrapperForNotWhenTraitWithMultipleDifferentAnnotations](JObject("allowAll" -> JBool(true), "value" -> JInt(2), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleDifferentAnnotations(NotWhenMultiA(), true ,2)))
+        }
+
+        "Throws exception if trying to match multiple possible @NotWhen annotations" in {
+          try {
+            verifyValidation[WrapperForNotWhenTraitWithMultipleRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(3), "field" -> JObject()), Right(WrapperForNotWhenTraitWithMultipleRestrictions(NotWhenAltE(), false, 3)))
+            fail("Shouldn't succeed")
+          } catch {
+            case e: TooManyMatchingCasesException =>
+              e.cases.length should equal(3)
+              e.path should equal("field")
+          }
+        }
+
+        "Allows null-checking by using None as value" in {
+          verifyValidation[TraitWithParentRestrictions](JObject("number" -> JInt(1)), Right(AltOnlyWhenParentMissing(1)))
+          val expectedError = NotAnyOf(Map(
+            "altonlywhenparentmissing" -> List("""..=null"""),
+            "defaultalt" -> List("allowed properties [] do not contain [number]")
+          ))
+          verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject("number" -> JInt(1))), Left(List(ValidationError("thing", JObject("number" -> JInt(1)), expectedError))))
+          verifyValidation[WrapperForTraitWithParentRestrictions](JObject("thing" -> JObject()), Right(WrapperForTraitWithParentRestrictions(DefaultAlt())))
+        }
+
+        "Restricts the allowed alternatives in AnyOf schemas, for multiple restrictions" in {
+          val expectedError = NotAnyOf(Map(
+            "notwhenfornotanyofalta" -> List("""Not allowed, when ../value = [2,3] or ../allowAll = [true]"""),
+            "notwhenfornotanyofaltb" -> List("""Not allowed, when ../value = [1] or ../allowAll = [false]"""),
+            "notwhenfornotanyofaltc" -> List("""Not allowed, when ../value = [1,3] or ../allowAll = [true]""")
+          ))
+          verifyValidation[WrapperForNotWhenTraitForNotAnyOfWithMultipleRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(1), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+        }
+
+        "Restricts the allowed alternatives in AnyOf schemas, for single restrictions" in {
+          val expectedError = NotAnyOf(Map(
+            "notwhenfornotanyofaltd" -> List("""Not allowed, when ../value = [2,3]"""),
+            "notwhenfornotanyofalte" -> List("""Not allowed, when ../value = [3,4]""")
+          ))
+          verifyValidation[WrapperForNotWhenTraitForNotAnyOfWithSingleRestrictions](JObject("allowAll" -> JBool(true), "value" -> JInt(3), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+        }
+
+        "Matches the correct case, if @OnlyWhen and @NotWhen annotations are used at the same time" in {
+          verifyValidation[WrapperForNotWhenTraitForNotWhenMixedWithOnlyWhen](JObject("allowAll" -> JBool(true), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitForNotWhenMixedWithOnlyWhen(NotWhenMixedWithOnlyWhenAltC(), true, 1)))
+          verifyValidation[WrapperForNotWhenTraitForNotWhenMixedWithOnlyWhen](JObject("allowAll" -> JBool(false), "value" -> JInt(1), "field" -> JObject()), Right(WrapperForNotWhenTraitForNotWhenMixedWithOnlyWhen(NotWhenMixedWithOnlyWhenAltC(), false, 1)))
+        }
+
+        "Does not match, if @OnlyWhen and @NotWhen annotations together make no match" in {
+          val expectedError = NotAnyOf(Map(
+            "notwhenmixedwithonlywhenalta" -> List("../value=1"),
+            "notwhenmixedwithonlywhenaltb" -> List("Not allowed, when ../value = [2]"),
+            "notwhenmixedwithonlywhenaltc" -> List("Not allowed, when ../value = [2]")
+          ))
+          verifyValidation[WrapperForNotWhenTraitForNotWhenMixedWithOnlyWhen](JObject("allowAll" -> JBool(true), "value" -> JInt(2), "field" -> JObject()), Left(List(ValidationError("field", JObject(), expectedError))))
+        }
+
       }
     }
     "JValues" - {
@@ -365,74 +492,214 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
 }
 
 trait EasilyDecidableTrait
+
 case class NonEmpty(value: String) extends EasilyDecidableTrait
+
 case class Empty() extends EasilyDecidableTrait
 
 
 trait DiscriminatorResolving
+
 case class TypeA(
-  @Discriminator @EnumValue("a") `type`: String = "a"
-) extends DiscriminatorResolving
+                  @Discriminator @EnumValue("a") `type`: String = "a"
+                ) extends DiscriminatorResolving
+
 case class TypeB(
-  @Discriminator @EnumValue("b") `type`: String = "b"
-) extends DiscriminatorResolving
+                  @Discriminator @EnumValue("b") `type`: String = "b"
+                ) extends DiscriminatorResolving
 
 case class TypeC(
-  @Discriminator @EnumValue("c") optional: Option[String] = Some("c")
-) extends DiscriminatorResolving
+                  @Discriminator @EnumValue("c") optional: Option[String] = Some("c")
+                ) extends DiscriminatorResolving
 
 case class TypeD(
-  @Discriminator @EnumValue("d") optional: Option[String] = Some("d")
-) extends DiscriminatorResolving
+                  @Discriminator @EnumValue("d") optional: Option[String] = Some("d")
+                ) extends DiscriminatorResolving
 
 case class Type1(
-  @Discriminator @EnumValue(1) `type`: Int = 1
-) extends DiscriminatorResolving
+                  @Discriminator @EnumValue(1) `type`: Int = 1
+                ) extends DiscriminatorResolving
 
 case class Type2(
-  @Discriminator @EnumValue(2) `type`: Int = 2
-) extends DiscriminatorResolving
+                  @Discriminator @EnumValue(2) `type`: Int = 2
+                ) extends DiscriminatorResolving
 
 case class SomethingElse(
-  // Existence of this field used for detection
-  @Discriminator field: String
-) extends DiscriminatorResolving
+                          // Existence of this field used for detection
+                          @Discriminator field: String
+                        ) extends DiscriminatorResolving
 
 
-case class MoreNumbers(i: Int, f: Float, l: Long, d: Double, bd : BigDecimal, bi: BigInt)
-case class JavaNumbers(i: Integer, f: java.lang.Float, l: java.lang.Long, d: java.lang.Double, bd : java.math.BigDecimal)
-case class BigNumbers(bi: BigInt, bd : BigDecimal)
-case class MoreNumbersInLists(i: List[Int], f: List[Float], l: List[Long], d: List[Double], bd : List[BigDecimal], bi: List[BigInt])
-case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d: Option[Double], bd : Option[BigDecimal], bi: Option[BigInt])
+case class MoreNumbers(i: Int, f: Float, l: Long, d: Double, bd: BigDecimal, bi: BigInt)
+
+case class JavaNumbers(i: Integer, f: java.lang.Float, l: java.lang.Long, d: java.lang.Double, bd: java.math.BigDecimal)
+
+case class BigNumbers(bi: BigInt, bd: BigDecimal)
+
+case class MoreNumbersInLists(i: List[Int], f: List[Float], l: List[Long], d: List[Double], bd: List[BigDecimal], bi: List[BigInt])
+
+case class OptionalNumbers(i: Option[Int], f: Option[Float], l: Option[Long], d: Option[Double], bd: Option[BigDecimal], bi: Option[BigInt])
 
 case class OnlyWhenFieldContainer(number: Int, thing: WithOnlyWhenFieldsInParent)
+
 case class WithOnlyWhenFieldsInParent(@OnlyWhen("../number", 1) field: Option[String])
 
+case class NotWhenListFieldContainer(number: Int, thing: WithNotWhenListFieldsInParent)
+
+case class NotWhenSingleListFieldContainer(number: Int, thing: WithSingleNotWhenListFieldsInParent)
+
+case class NotWhenMixedListFieldContainer(number: Int, thing: WithNotWhenMixedListFieldsInParent)
+
+case class NotWhenSingleElementFieldContainer(number: Int, thing: WithNotWhenSingleElementFieldsInParent)
+
+case class WithNotWhenListFieldsInParent(@NotWhen("../number", List(1, 2, 3)) field: Option[String])
+
+case class WithSingleNotWhenListFieldsInParent(@NotWhen("../number", List(1)) field: Option[String])
+
+case class WithNotWhenMixedListFieldsInParent(@NotWhen("../number", List(1, "2", 3)) field: Option[String])
+
+case class WithNotWhenSingleElementFieldsInParent(@NotWhen("../number", 1) field: Option[String])
+
 case class WithOnlyWhenFieldsWithDefaultValueAndMultipleAllowedValues(
-   asdf: Int,
-   @OnlyWhen("asdf", 1)
-   @OnlyWhen("asdf", 2)
-   @DefaultValue("hello")
-   field: String)
+                                                                       asdf: Int,
+                                                                       @OnlyWhen("asdf", 1)
+                                                                       @OnlyWhen("asdf", 2)
+                                                                       @DefaultValue("hello")
+                                                                       field: String)
+
+case class WithNotWhenFieldsWithDefaultValueAndMultipleAllowedValues(
+                                                                      code: Int,
+                                                                      @NotWhen("code", List(1, 2))
+                                                                      @NotWhen("code", List(3, 4))
+                                                                      @DefaultValue("DefaultVal")
+                                                                      field: String)
+
+case class FieldNotOkIfNotWhenParentMissing(@NotWhen("..", None) field: Option[String])
+
+case class WrapperForTraitOkIfNotWhenParentMissing(thing: FieldNotOkIfNotWhenParentMissing)
+
+case class NotWhenAltA() extends NotWhenTraitWithSingleRestriction
+
+@NotWhen("../value", 1)
+@NotWhen("../allowAll", false)
+case class NotWhenAltB() extends NotWhenTraitWithMultipleRestrictions
+
+@NotWhen("../value", 1)
+@NotWhen("../value", 2)
+@NotWhen("../allowAll", false)
+case class NotWhenAltC() extends NotWhenTraitWithMultipleRestrictions
+
+@NotWhen("../allowAll", true)
+case class NotWhenAltD() extends NotWhenTraitWithSingleRestriction
+
+@NotWhen("../value", 1)
+@NotWhen("../value", 2)
+case class NotWhenAltE() extends NotWhenTraitWithMultipleRestrictions
+
+@NotWhen("../value", List(2, 3))
+@NotWhen("../allowAll", true)
+case class NotWhenAltF() extends NotWhenTraitWithMultipleRestrictions
+
+@NotWhen("../value", List(2, 3))
+@NotWhen("../allowAll", false)
+case class NotWhenAltG() extends NotWhenTraitWithMultipleRestrictions
+
+@NotWhen("../value", List(1, 3))
+@NotWhen("../allowAll", true)
+case class NotWhenAltH() extends NotWhenTraitWithMultipleRestrictions
+
+@NotWhen("../allowAll", false)
+case class NotWhenMultiA() extends NotWhenTraitWithMultipleDifferentAnnotations
+@OnlyWhen("../value", 1)
+case class NotWhenMultiB() extends NotWhenTraitWithMultipleDifferentAnnotations
+@NotWhen("../value", 2)
+@NotWhen("../allowAll", true)
+case class NotWhenMultiC() extends NotWhenTraitWithMultipleDifferentAnnotations
+case class NotWhenMultiD() extends NotWhenTraitWithMultipleDifferentAnnotations
+case class NotWhenMultiE() extends NotWhenTraitWithMultipleDifferentAnnotations
+
+case class WrapperForNotWhenTraitWithMultipleDifferentAnnotations(field: NotWhenTraitWithMultipleDifferentAnnotations, allowAll: Boolean, value: Int)
+
+sealed trait NotWhenTraitWithMultipleDifferentAnnotations
+
+case class WrapperForNotWhenTraitWithMultipleRestrictions(field: NotWhenTraitWithMultipleRestrictions, allowAll: Boolean, value: Int)
+
+sealed trait NotWhenTraitWithMultipleRestrictions
+
+case class WrapperForNotWhenTraitWithRestrictions(field: NotWhenTraitWithSingleRestriction, allowAll: Boolean, value: Int)
+
+sealed trait NotWhenTraitWithSingleRestriction
+
+@NotWhen("../value", List(2, 3))
+@NotWhen("../allowAll", true)
+case class NotWhenForNotAnyOfAltA() extends NotWhenTraitForNotAnyOfWithMultipleRestrictions
+
+@NotWhen("../value", 1)
+@NotWhen("../allowAll", false)
+case class NotWhenForNotAnyOfAltB() extends NotWhenTraitForNotAnyOfWithMultipleRestrictions
+
+@NotWhen("../value", List(1, 3))
+@NotWhen("../allowAll", true)
+case class NotWhenForNotAnyOfAltC() extends NotWhenTraitForNotAnyOfWithMultipleRestrictions
+
+@NotWhen("../value", List(2, 3))
+case class NotWhenForNotAnyOfAltD() extends NotWhenTraitForNotAnyOfWithSingleRestrictions
+
+@NotWhen("../value", List(3, 4))
+case class NotWhenForNotAnyOfAltE() extends NotWhenTraitForNotAnyOfWithSingleRestrictions
+
+case class WrapperForNotWhenTraitForNotAnyOfWithMultipleRestrictions(field: NotWhenTraitForNotAnyOfWithMultipleRestrictions, allowAll: Boolean, value: Int)
+
+sealed trait NotWhenTraitForNotAnyOfWithMultipleRestrictions
+
+case class WrapperForNotWhenTraitForNotAnyOfWithSingleRestrictions(field: NotWhenTraitForNotAnyOfWithSingleRestrictions, allowAll: Boolean, value: Int)
+
+sealed trait NotWhenTraitForNotAnyOfWithSingleRestrictions
+
+
+@NotWhen("../value", 1)
+@OnlyWhen("../value", 1)
+case class NotWhenMixedWithOnlyWhenAltA() extends NotWhenTraitForNotWhenMixedWithOnlyWhen
+
+@NotWhen("../value", 2)
+@OnlyWhen("../value", 2)
+case class NotWhenMixedWithOnlyWhenAltB() extends NotWhenTraitForNotWhenMixedWithOnlyWhen
+
+@NotWhen("../value", 2)
+case class NotWhenMixedWithOnlyWhenAltC() extends NotWhenTraitForNotWhenMixedWithOnlyWhen
+
+case class WrapperForNotWhenTraitForNotWhenMixedWithOnlyWhen(field: NotWhenTraitForNotWhenMixedWithOnlyWhen, allowAll: Boolean, value: Int)
+
+sealed trait NotWhenTraitForNotWhenMixedWithOnlyWhen
 
 case class WrapperForTraitWithRestrictions(field: TraitWithRestrictions, allowAll: Boolean)
+
 sealed trait TraitWithRestrictions
+
 case class AltA(name: String) extends TraitWithRestrictions
+
 @OnlyWhen("../allowAll", true)
 case class AltB() extends TraitWithRestrictions
 
 case class WrapperForTraitWithMultipleRestrictions(field: TraitWithMultipleRestrictions, asdf: Int)
+
 sealed trait TraitWithMultipleRestrictions
+
 case class Alt1(name: String) extends TraitWithMultipleRestrictions
+
 @OnlyWhen("../asdf", 1)
 @OnlyWhen("../asdf", 2)
 case class Alt2() extends TraitWithMultipleRestrictions
 
 case class FieldOkIfParentMissing(@OnlyWhen("..", None) field: Option[String])
+
 case class WrapperForTraitOkIfParentMissing(thing: FieldOkIfParentMissing)
 
 trait TraitWithParentRestrictions
+
 @OnlyWhen("..", None)
 case class AltOnlyWhenParentMissing(number: Int) extends TraitWithParentRestrictions
+
 case class DefaultAlt() extends TraitWithParentRestrictions
+
 case class WrapperForTraitWithParentRestrictions(thing: TraitWithParentRestrictions)

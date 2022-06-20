@@ -2,7 +2,7 @@ package fi.oph.scalaschema.extraction
 
 import fi.oph.scalaschema.annotation._
 import fi.oph.scalaschema.{Schema, _}
-import org.json4s.JsonAST.JObject
+import org.json4s.JsonAST.{JObject}
 import org.json4s._
 import org.json4s.jackson.JsonMethods
 
@@ -56,6 +56,12 @@ object AnyOfExtractor {
           List(OnlyWhenCriteria(keyPath, onlyWhens.map(_.serializableForm)))
       }
 
+      val notWhens: List[DiscriminatorCriterion] = s.metadata.collect({ case o:NotWhen => o}) match {
+        case Nil => Nil
+        case notWhens =>
+          List(NotWhenCriteria(keyPath, notWhens.map(_.serializableForm)))
+      }
+
       val criteria = discriminatorProps match {
         case Nil =>
           NoOtherPropertiesThan(keyPath, s.properties.map(_.key)) :: (s.properties.flatMap(propertyMatchers(contextPath, keyPath, _)))
@@ -63,7 +69,7 @@ object AnyOfExtractor {
           props.flatMap(propertyMatchers(contextPath, keyPath, _))
       }
 
-      AllOfCriterion(criteria ++ onlyWhens)
+      AllOfCriterion(criteria ++ onlyWhens ++ notWhens)
     case s: FlattenedSchema => AllOfCriterion(List(Flattened(keyPath, s, discriminatorCriteria(contextPath, s.property.schema, keyPath))))
     case s: NumberSchema => IsNumeric(keyPath, s)
     case s: StringSchema => IsString(keyPath, s)
@@ -228,12 +234,35 @@ object AnyOfExtractor {
     }
   }
 
+  case class NotWhenCriteria(keyPath: KeyPath, criteria: List[SerializableNotWhen]) extends DiscriminatorCriterion {
+    def weight = 9000
+
+    def apply(json: JsonCursor)(implicit context: ExtractionContext): List[String] = {
+      val valueAtKeyPath = keyPath(json)
+      val found = criteria.find { case SerializableNotWhen(path, values) =>
+        NotWhenMatcher.matchValues(valueAtKeyPath.navigate(path).json, values)
+      }
+      found match {
+        case Some(matching) => List(description)
+        case None => Nil
+      }
+    }
+
+    override def description: String = {
+      def convertToString(arr: JValue) = arr match {
+        case JArray(list) => list.map(someValue => JsonMethods.compact(someValue)).mkString(s",")
+        case value: JValue => JsonMethods.compact(value)
+      }
+        s"Not allowed, when ${criteria.map { case SerializableNotWhen(path, values) => s"${path} = [${convertToString(values)}]" }.mkString(" or ")}"
+    }
+  }
+
   case class NoOtherPropertiesThan(keyPath: KeyPath, keys: List[String]) extends DiscriminatorCriterion {
     def apply(value: JsonCursor)(implicit context: ExtractionContext): List[String] = PropertyExists(keyPath)(value) match {
       case Nil =>
         keyPath(value).json match {
           case JObject(values) =>
-            values.toList.map(_._1).filterNot(keys.contains(_)) match {
+            values.map(_._1).filterNot(keys.contains(_)) match {
               case Nil => Nil
               case unexpected => List(withKeyPath(s"allowed properties [${keys.mkString(", ")}] do not contain [${unexpected.mkString(", ")}]"))
             }

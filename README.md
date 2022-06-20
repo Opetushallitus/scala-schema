@@ -162,6 +162,28 @@ The factory will *cache the created schemas* so that
 subsequent requests for a certain schema will be super fast. Therefore you should store your schema factory in a variable, 
 but you don't need to store the individual schemas.
 
+### Examples of matching multiple case classes
+
+Creating multiple case classes with different combinations of annotations may lead to situations, where the match is not what is expected. These examples are especially related to the use of `@OnlyWhen` and `@NotWhen` -annotations.
+
+The following examples assume, that the case classes extend the same trait.
+
+#### 1. Matches a case class with annotations, and one or more case classes without annotations
+
+If a case class with annotations is matched, and there exists one or more case classes without annotations (that would also meet the matching criteria), the case class with annotations is selected.
+
+#### 2. Does not match a case class with annotations, but matches a case class with no annotations
+
+If there are multiple case classes with annotations defined, but none of them match, the case class with no annotations is selected as the match.
+
+#### 3. Matches every case class with annotations
+
+If there are multiple case classes with annotations defined, and more than one of them match, the deserialising throws `TooManyMatchingCasesException`
+
+#### 4. Matches multiple case classes without annotations
+
+If there are multiple case classes with no annotations, the deserialising throws `TooManyCatchingCasesException`.
+
 ### How to use as dependency
 
 The `scala-schema` library is currently maintained in two branches for scala versions 2.11 and 2.12.
@@ -205,7 +227,7 @@ Add Jitpack.io resolver:
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
     libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.23.0_2.12"
-g 
+
 ### Developing scala-schema
 
 Project is built and tested with Maven. So `mvn install` will do the job.
