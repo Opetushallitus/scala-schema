@@ -1,9 +1,8 @@
 package fi.oph.scalaschema.extraction
 
 import java.lang.reflect.Constructor
-
 import fi.oph.scalaschema._
-import fi.oph.scalaschema.annotation.{DefaultValue, OnlyWhen, SerializableOnlyWhen}
+import fi.oph.scalaschema.annotation.{DefaultValue, NotWhen, OnlyWhen, SerializableNotWhen, SerializableOnlyWhen}
 import org.json4s.JsonAST.JObject
 import org.json4s._
 
@@ -32,7 +31,8 @@ object ObjectExtractor {
               case _ => true
             }
 
-            val onlyWhenAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case o:OnlyWhen if valuePresent => o.serializableForm }
+            val onlyWhenAnnotations: List[SerializableOnlyWhen] = property.metadata.collect { case o: OnlyWhen if valuePresent => o.serializableForm }
+            val notWhenAnnotations: List[SerializableNotWhen] = property.metadata.collect { case o: NotWhen if valuePresent => o.serializableForm }
 
             val extractedPropertyValue = SchemaValidatingExtractor.extract(propertyValueCursor, property.schema, property.metadata)
 
@@ -53,11 +53,31 @@ object ObjectExtractor {
                 }
             }
 
-            onlyWhenMismatch match {
-              case None =>
-                extractedPropertyValue
-              case Some(mismatch) =>
-                Left(List(ValidationError(propertyValueCursor.path, propertyValueCursor.json, mismatch)))
+            val notWhenMismatch: Option[NotWhenMismatch] = notWhenAnnotations match {
+              case Nil => None
+              case _ =>
+                val found = notWhenAnnotations.flatMap { case SerializableNotWhen(path, expectedValues) =>
+                  val valueFromPath: JValue = cursor.navigate(path).json
+                  expectedValues match {
+                    case Some(a) => a.values.filter(anyValue => JsonCompare.equals(valueFromPath, ValueConversion.anyToJValue(anyValue)))
+                    case None => Nil
+                  }
+                }
+                if (found.isEmpty) {
+                  None
+                } else {
+                  DefaultValue.getDefaultValue[Any](property.metadata) match {
+                    case Some(v) if Right(v) == extractedPropertyValue => None // Allow default value even when field is otherwise rejected
+                    case _ => Some(NotWhenMismatch(notWhenAnnotations))
+                  }
+                }
+            }
+
+            (onlyWhenMismatch, notWhenMismatch) match {
+              case (None, None) => extractedPropertyValue
+              case (Some(mismatch), None) => Left(List(ValidationError(propertyValueCursor.path, propertyValueCursor.json, mismatch)))
+              case (None, Some(mismatch)) => Left(List(ValidationError(propertyValueCursor.path, propertyValueCursor.json, mismatch)))
+              case (Some(onlyWhenMismatch), Some(notWhenMismatch)) => Left(List(ValidationError(propertyValueCursor.path, propertyValueCursor.json, onlyWhenMismatch), ValidationError(propertyValueCursor.path, propertyValueCursor.json, notWhenMismatch)))
             }
           }
         val unexpectedProperties = if (context.ignoreUnexpectedProperties) Nil else values
