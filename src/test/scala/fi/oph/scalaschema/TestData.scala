@@ -10,6 +10,7 @@ import org.json4s.JValue
 
 case class RequiredFields(field: Boolean)
 case class OptionalFields(field: Option[Boolean])
+case class OptionalFieldsWithDefault(@DefaultValue(Some(false)) field: Option[Boolean])
 case class SomeFields(field: Some[Boolean])
 case class Booleans(field: Boolean)
 case class BooleansWithDefault(@DefaultValue(true) field: Boolean)
