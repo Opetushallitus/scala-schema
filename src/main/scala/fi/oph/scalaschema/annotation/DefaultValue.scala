@@ -4,7 +4,13 @@ import fi.oph.scalaschema.Metadata
 import org.json4s.JsonAST.JObject
 
 case class DefaultValue(value: Any) extends Metadata {
-  override def appendMetadataToJsonSchema(obj: JObject) = appendToDescription(obj, s"(default value: ${value})")
+  override def appendMetadataToJsonSchema(obj: JObject) = {
+    val display = value match {
+      case v: Option[_] => v.map(_.toString).getOrElse("null")
+      case v: Any => v
+    }
+    appendToDescription(obj, s"(default value: ${display})")
+  }
 }
 
 object DefaultValue {

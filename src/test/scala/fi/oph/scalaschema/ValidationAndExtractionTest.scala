@@ -181,6 +181,9 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
       "Null value translates to None" in {
         verifyValidation[OptionalFields](JObject("field" -> JNull), Right(OptionalFields(None)))
       }
+      "Missing field with default value translates to default value" in {
+        verifyValidation[OptionalFieldsWithDefault](JObject(), Right(OptionalFieldsWithDefault(Some(false))))
+      }
     }
     "@DefaultValue annotation" - {
       "When value is missing from data" - {
