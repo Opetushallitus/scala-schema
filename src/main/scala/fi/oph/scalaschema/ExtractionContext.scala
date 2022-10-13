@@ -2,7 +2,7 @@ package fi.oph.scalaschema
 
 import fi.oph.scalaschema.extraction.AnyOfExtractor.DiscriminatorCriterion
 import fi.oph.scalaschema.extraction.{CustomDeserializer, ValidationError}
-import org.json4s.JValue
+import org.json4s.{JArray, JValue}
 import org.json4s.JsonAST.JNothing
 
 /**
@@ -28,6 +28,10 @@ case class JsonCursor(json: JValue, parent: Option[JsonCursor] = None, path: Str
   def navigate(subPath: String) = {
     subPath.split("/").foldLeft(this) {
       case (currentCursor, "..") => currentCursor.parent.getOrElse(JsonCursor(JNothing))
+      case (currentCursor, index) if currentCursor.json.isInstanceOf[JArray] && index.forall(Character.isDigit) =>
+        currentCursor.json.asInstanceOf[JArray].arr.lift(index.toInt)
+          .map(child => currentCursor.subCursor(child, subPath))
+          .getOrElse(JsonCursor(JNothing))
       case (currentCursor, pathElem) => currentCursor.subCursor(currentCursor.json \ pathElem, pathElem)
     }
   }
