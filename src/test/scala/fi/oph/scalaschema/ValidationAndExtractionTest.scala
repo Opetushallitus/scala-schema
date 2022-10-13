@@ -299,6 +299,43 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
           verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Left(List(ValidationError("thing.field", JString("hello"), OnlyWhenMismatch(List(SerializableOnlyWhen("..", JNull)))))))
           verifyValidation[WrapperForTraitOkIfParentMissing](JObject("thing" -> JObject()), Right(WrapperForTraitOkIfParentMissing(FieldOkIfParentMissing(None))))
         }
+
+        "Arrays" - {
+          "Works if array item equals the condition" in {
+            verifyValidation[FieldOkIfSecondListItemIsBar](
+              JObject("field" -> JString("hello"), "list" -> JArray(List(JString("foo"), JString("bar")))),
+              Right(FieldOkIfSecondListItemIsBar(Some("hello"), List("foo", "bar")))
+            )
+          }
+
+          "Fails if array item does not equal the condition" in {
+            verifyValidation[FieldOkIfSecondListItemIsBar](
+              JObject("field" -> JString("hello"), "list" -> JArray(List(JString("bar"), JString("foo")))),
+              Left(List(ValidationError("field", JString("hello"), OnlyWhenMismatch(List(SerializableOnlyWhen("list/1", JString("bar")))))))
+            )
+          }
+
+          "Fails if array item pointed by the path is missing" in {
+            verifyValidation[FieldOkIfSecondListItemIsBar](
+              JObject("field" -> JString("hello"), "list" -> JArray(List(JString("bar")))),
+              Left(List(ValidationError("field", JString("hello"), OnlyWhenMismatch(List(SerializableOnlyWhen("list/1", JString("bar")))))))
+            )
+          }
+
+          "Works if the field bound with @OnlyWhen is empty" in {
+            verifyValidation[FieldOkIfSecondListItemIsBar](
+              JObject("list" -> JArray(List(JString("bar"), JString("foo")))),
+              Right(FieldOkIfSecondListItemIsBar(None, List("bar", "foo")))
+            )
+          }
+
+          "Does not use array indexing for objects" in {
+            verifyValidation[FieldOkIfMapPropNamed1IsBar](
+              JObject("field" -> JString("hello"), "map" -> JObject("1" -> JString("bar"))),
+              Right(FieldOkIfMapPropNamed1IsBar(Some("hello"), Map("1" -> "bar")))
+            )
+          }
+        }
       }
 
       "When applied to case classes" - {
@@ -375,6 +412,18 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
           verifyValidation[FieldNotOkIfNotWhenParentMissing](JObject("field" -> JString("hello")), Left(List(ValidationError("field", JString("hello"), NotWhenMismatch(List(SerializableNotWhen("..", JNull)))))))
           verifyValidation[WrapperForTraitOkIfNotWhenParentMissing](JObject("thing" -> JObject("field" -> JString("hello"))), Right(WrapperForTraitOkIfNotWhenParentMissing(FieldNotOkIfNotWhenParentMissing(Some("hello")))))
           verifyValidation[WrapperForTraitOkIfNotWhenParentMissing](JObject("thing" -> JObject()), Right(WrapperForTraitOkIfNotWhenParentMissing(FieldNotOkIfNotWhenParentMissing(None))))
+        }
+
+        "Works with array indices" in {
+          verifyValidation[FieldOkIfSecondListItemIsNotBar](
+            JObject("field" -> JString("hello"), "list" -> JArray(List(JString("foo"), JString("bar")))),
+            Left(List(ValidationError("field", JString("hello"), NotWhenMismatch(List(SerializableNotWhen("list/1", JString("bar")))))))
+          )
+
+          verifyValidation[FieldOkIfSecondListItemIsNotBar](
+            JObject("field" -> JString("hello"), "list" -> JArray(List(JString("bar"), JString("foo")))),
+            Right(FieldOkIfSecondListItemIsNotBar(Some("hello"), List("bar", "foo")))
+          )
         }
       }
 
@@ -706,3 +755,9 @@ case class AltOnlyWhenParentMissing(number: Int) extends TraitWithParentRestrict
 case class DefaultAlt() extends TraitWithParentRestrictions
 
 case class WrapperForTraitWithParentRestrictions(thing: TraitWithParentRestrictions)
+
+case class FieldOkIfSecondListItemIsBar(@OnlyWhen("list/1", "bar") field: Option[String], list: List[String])
+
+case class FieldOkIfMapPropNamed1IsBar(@OnlyWhen("map/1", "bar") field: Option[String], map: Map[String, String])
+
+case class FieldOkIfSecondListItemIsNotBar(@NotWhen("list/1", "bar") field: Option[String], list: List[String])
