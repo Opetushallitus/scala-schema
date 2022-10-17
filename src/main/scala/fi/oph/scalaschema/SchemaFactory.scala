@@ -361,13 +361,17 @@ object Annotations {
       case (DoubleClass, value) => parseAsDouble(value)
       case (IntegerClass, value) => parseAsInteger(value)
       case (BooleanClass, value) => parseAsBoolean(value)
+      case (_, value) if value.isEmpty => None
       case (tyep, value) =>
         Try(parseAsInteger(value.toString.toInt))
           .orElse(Try(parseAsDouble(value.toString.toDouble)))
           .orElse(Try(parseAsBoolean(value.toString.toBoolean)))
           .getOrElse {
+            println(s"value:       $value")
+            println(s"untypecheck: ${tb.untypecheck(value)}")
             val evaluated = tb.eval(tb.untypecheck(value))
-            //println("Expensive: " + annotationClass.getName + " / " + tyep.getName + " = " + value)
+            println(s"evaluated:   $evaluated")
+            // println("Expensive: " + annotationClass.getName + " / " + tyep.getName + " = " + value)
             evaluated.asInstanceOf[AnyRef]
           }
     }

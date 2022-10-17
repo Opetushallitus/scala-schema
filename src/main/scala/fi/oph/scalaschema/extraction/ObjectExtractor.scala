@@ -90,7 +90,10 @@ object ObjectExtractor {
           case _ =>
             Left(errors)
         }
-      case json => Left(List(ValidationError(cursor.path, json, UnexpectedType("object"))))
+      case json: Any =>
+        DefaultValue.getDefaultValue[AnyRef](metadata)
+          .map(x => x)
+          .toRight(List(ValidationError(cursor.path, json, UnexpectedType("object"))))
     }
   }
 

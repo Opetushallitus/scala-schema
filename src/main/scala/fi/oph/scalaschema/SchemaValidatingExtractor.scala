@@ -1,4 +1,5 @@
 package fi.oph.scalaschema
+import fi.oph.scalaschema.annotation.DefaultValue
 import fi.oph.scalaschema.extraction._
 import org.json4s._
 import org.json4s.jackson.JsonMethods
@@ -60,7 +61,7 @@ object SchemaValidatingExtractor {
   }
 
   private def extractRequired[T](cursor: JsonCursor, metadata: List[Metadata])(doExtract: => Either[List[ValidationError], T])(implicit context: ExtractionContext) = cursor.json match {
-    case JNothing =>
+    case JNothing if DefaultValue.getDefaultValue(metadata).isEmpty =>
       Left(List(ValidationError(cursor.path, cursor.json, MissingProperty())))
     case _ =>
       doExtract

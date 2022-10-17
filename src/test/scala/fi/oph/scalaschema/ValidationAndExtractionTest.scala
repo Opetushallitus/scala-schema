@@ -196,6 +196,9 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         "Numbers" in {
           verifyValidation[StringsWithDefault](JObject(), Right(StringsWithDefault("hello")))
         }
+        "Object trees" in {
+          verifyValidation[ValueContainer](JObject(), Right(ValueContainer(Some(ValueProp(Some("my precious"), None)))))
+        }
       }
       "When value is null in data" in {
         verifyValidation[BooleansWithDefault](JObject(JField("field", JNull)), Right(BooleansWithDefault(true)))
@@ -761,3 +764,6 @@ case class FieldOkIfSecondListItemIsBar(@OnlyWhen("list/1", "bar") field: Option
 case class FieldOkIfMapPropNamed1IsBar(@OnlyWhen("map/1", "bar") field: Option[String], map: Map[String, String])
 
 case class FieldOkIfSecondListItemIsNotBar(@NotWhen("list/1", "bar") field: Option[String], list: List[String])
+
+case class ValueContainer(@DefaultValue(Some(ValueProp(Some("my precious"), None))) myValue: Option[ValueProp])
+case class ValueProp(@DefaultValue(Some("default string")) myString: Option[String], myNumber: Option[Int])
