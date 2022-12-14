@@ -148,6 +148,38 @@ object CustomSerializationExample extends App {
 }
 ```
 
+#### Including class reference in the serialized JSON
+
+You can emit the Scala class name to the serialized JSON by setting `includeClassReferences = true` in the `SerializationContext`:
+
+```scala
+case class Zoo(animals: List[Animal])
+case class Animal(name: String, age: Int)
+
+object SerializationExample extends App {
+  val context = SerializationContext(SchemaFactory.default, includeClassReferences = true)
+  val zoo = Zoo(List(Animal("giraffe", 23)))
+  val serialized: JValue = Serializer.serialize(zoo, context)
+  val stringValue: String = JsonMethods.pretty(serialized)
+  println(stringValue)
+  /*
+  
+  Output:
+  
+  {
+      "animals": [
+          {
+              "name":"giraffe",
+              "age":23,
+              "$class":"fi.oph.scalaschema.Animal"
+          }
+      ],
+      "$class":"fi.oph.scalaschema.Zoo"
+  }
+   */
+}
+```
+
 In the above example, all fields with the name "age" are hidden. More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/SerializationSpec.scala).
 
 ### Schemas and Factories

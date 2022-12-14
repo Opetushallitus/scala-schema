@@ -1,6 +1,6 @@
 package fi.oph.scalaschema
 import fi.oph.scalaschema.extraction._
-import org.json4s._
+import org.json4s.{JString, _}
 import org.json4s.jackson.JsonMethods
 
 import scala.reflect.runtime.{universe => ru}
@@ -10,16 +10,29 @@ object SchemaValidatingExtractor {
 
   def extract[T](json: JValue)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
     val rootSchema = context.schemaFactory.createSchema[T]
-    extract(json, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
+    if(context.stripClassReferences) {
+      extract(removeJsonField(json, "$class"), rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
+    } else {
+      extract(json, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
+    }
   }
 
   def extract[T](json: String)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
     extract(JsonMethods.parse(json))
   }
 
+  def removeJsonField(json: JValue, fieldName: String) = json removeField {
+    case (key, _) if key == fieldName => true
+    case _ => false
+  }
+
   def extract(json: JValue, klass: Class[_])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     val rootSchema = context.schemaFactory.createSchema(klass.getName)
-    extract(json, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[AnyRef])
+    if (context.stripClassReferences) {
+      extract(removeJsonField(json, "$class"), rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[AnyRef])
+    } else {
+      extract(json, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[AnyRef])
+    }
   }
 
   def extract(json: JValue, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {

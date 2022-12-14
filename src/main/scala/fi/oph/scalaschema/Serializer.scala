@@ -3,12 +3,11 @@ package fi.oph.scalaschema
 import java.time.format.DateTimeFormatter.ISO_INSTANT
 import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime}
 import java.util.Date
-
 import fi.oph.scalaschema.SchemaPropertyProcessor.SchemaPropertyProcessor
 import fi.oph.scalaschema.extraction.SchemaNotFoundException
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
-import org.json4s.JsonAST._
+import org.json4s.JsonAST.{JField, _}
 import org.json4s.{DefaultFormats, Extraction, Formats, JValue}
 
 import scala.reflect.runtime.{universe => ru}
@@ -80,7 +79,7 @@ object Serializer {
         case jValue => Some(JField(p.key, jValue))
       }
     }
-  })
+  } ++ (if(context.includeClassReferences) { List(JField("$class", JString(s.fullClassName))) } else { Nil }))
 
   def serializeString(x: Any): JValue = x match {
     case x: String => JString(x)
@@ -112,7 +111,7 @@ object Serializer {
   }
 }
 
-case class SerializationContext(schemaFactory: SchemaFactory, propertyProcessor: SchemaPropertyProcessor = (s, p) => List(p), omitEmptyFields: Boolean = true)
+case class SerializationContext(schemaFactory: SchemaFactory, propertyProcessor: SchemaPropertyProcessor = (s, p) => List(p), omitEmptyFields: Boolean = true, includeClassReferences: Boolean = false)
 
 object SchemaPropertyProcessor {
   type SchemaPropertyProcessor = (ClassSchema, Property) => List[Property]
