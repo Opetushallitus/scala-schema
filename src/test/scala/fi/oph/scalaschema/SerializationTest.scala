@@ -5,7 +5,7 @@ import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JValue
-import org.json4s.JsonAST.{JArray, JObject, JString}
+import org.json4s.JsonAST.{JArray, JNull, JObject, JString}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -17,6 +17,11 @@ class SerializationTest extends AnyFreeSpec with Matchers {
   }
   "numbers" in {
     testSerialization(Numbers(1, 1l, 0.4f, 1.1), """{"a":1,"b":1,"c":0.4000000059604645,"d":1.1}""")
+  }
+
+  "StringOptions" in {
+    testSerialization(StringOptions(None), """{}""")
+    testSerialization(StringOptions(Some("Hello")), """{"value":"Hello"}""")
   }
 
   "traits" in {
@@ -83,6 +88,10 @@ class SerializationTest extends AnyFreeSpec with Matchers {
   "JValues" - {
     "JValue field" in {
       testSerialization(WithJValue(JString("hello")), """{"x":"hello"}""")
+    }
+
+    "JValue null field" in {
+      testSerialization(WithJValue(JNull), """{"x":null}""")
     }
 
     "JValue" in {
