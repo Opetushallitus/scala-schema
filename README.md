@@ -118,6 +118,36 @@ case class ValidationTestClass(name: String, stuff: List[Int])
 The `ExtractionContext` object created in the example above is used by the `scala-schema` extraction mechanism to cache
 some information to make subsequent extractions faster. Hence it makes sense to store this object in a variable.
 
+#### Treat null values as missing
+
+**In scala-schema versions prior to `2.33.0`, when trying to extract a Scala schema, which included the type `Option[T]` with JSON data that included the type `null`, the schema fails to narrow down.**
+
+**Starting from `scala-schema` version `2.33.0`, you can omit null values from the input JSON by setting `omitNullValues = true` in the `SerializationContext`:**
+
+```scala
+trait SomeTrait {
+}
+
+case class SomeTraitBranch1(first: String, second: Option[String] = None, third: Option[String] = None) extends SomeTrait {
+}
+
+case class SomeTraitBranch2(second: String, third: Option[String] = None) extends SomeTrait {
+}
+
+case class SomeTraitBranch3(third: String) extends SomeTrait {
+}
+
+
+object SerializationExample extends App {
+  implicit val context = SerializationContext(SchemaFactory.default, omitNullValues = true)
+  val branch2 = SchemaValidatingExtractor.extract[SomeTrait]("""{"first": null, "second": "Example second", "third": null}""")
+  /*
+  Output type is SomeTraitBranch2. This threw a ValidationError in scala-schema versions prior to 2.33.0
+  */
+}
+```
+
+
 More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/ValidationAndExtractionTest.scala)
 
 ### Serialization

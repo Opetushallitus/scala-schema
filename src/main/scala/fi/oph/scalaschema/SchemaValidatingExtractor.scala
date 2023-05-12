@@ -10,11 +10,15 @@ object SchemaValidatingExtractor {
 
   def extract[T](json: JValue)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
     val rootSchema = context.schemaFactory.createSchema[T]
-    if(context.stripClassReferences) {
-      extract(removeJsonField(json, "$class"), rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
-    } else {
-      extract(json, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
+    val dta = {
+      (context.stripClassReferences, context.omitNullFromInput) match {
+        case (true, true) =>  removeJsonField(removeNullFields(json) , "$class")
+        case (true, false) =>  removeJsonField(json , "$class")
+        case (false, true) =>  removeNullFields(json)
+        case _ => json
+      }
     }
+    extract(dta, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
   }
 
   def extract[T](json: String)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
@@ -23,6 +27,11 @@ object SchemaValidatingExtractor {
 
   def removeJsonField(json: JValue, fieldName: String) = json removeField {
     case (key, _) if key == fieldName => true
+    case _ => false
+  }
+
+  def removeNullFields(json: JValue) = json removeField {
+    case (_, JNull) => true
     case _ => false
   }
 
