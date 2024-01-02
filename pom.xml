@@ -12,7 +12,7 @@
   </organization>
   <properties>
       <scala.version>2.12.15</scala.version>
-      <json4s.version>4.0.6</json4s.version>
+      <json4s.version>4.0.7</json4s.version>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
@@ -54,7 +54,7 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-text</artifactId>
-      <version>1.10.0</version>
+      <version>1.11.0</version>
     </dependency>
     <!-- test deps -->
     <dependency>
