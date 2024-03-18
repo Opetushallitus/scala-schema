@@ -2,7 +2,7 @@ package fi.oph.scalaschema.extraction
 
 import java.sql.Timestamp
 import java.time.format.DateTimeParseException
-import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
+import java.time.{LocalDate, LocalDateTime, ZonedDateTime, OffsetDateTime}
 import java.util.Date
 
 import fi.oph.scalaschema.{DateSchema, ExtractionContext, JsonCursor, Metadata}
@@ -34,6 +34,8 @@ object DateExtractor {
       Date.from(java.time.ZonedDateTime.parse(dateString).toInstant)
     } else if (dateType == classOf[DateTime]) {
       ISODateTimeFormat.dateTimeParser.withZoneUTC.parseDateTime(dateString)
+    } else if (dateType == classOf[OffsetDateTime]) {
+      OffsetDateTime.parse(dateString)
     } else {
       throw new UnsupportedOperationException("Unrecognized Date type: " + dateType.getName)
     }
