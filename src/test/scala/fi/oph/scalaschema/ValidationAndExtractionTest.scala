@@ -89,6 +89,14 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         }
       }
     }
+    "Scala name encoding" in {
+      val encodingRequired = ScalaNameEncoding("foo", "bar")
+      verifyExtractionRoundTrip(encodingRequired)
+
+      verifyValidation[ScalaNameEncoding](JObject(("@Foo" -> JObject()), ("type", JString("a"))), Left(List(
+        ValidationError("@Foo", JObject(), UnexpectedType("string"))
+      )))
+    }
     "Dates" in {
       val dates = Dates(
         LocalDate.parse("2015-12-30"),

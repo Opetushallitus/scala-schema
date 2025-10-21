@@ -120,6 +120,10 @@ class SerializationTest extends AnyFreeSpec with Matchers {
     testSerialization(ReadableFromString("hello", None), """{"value":"hello"}""")
   }
 
+  "Scala name encoding" in {
+    testSerialization(ScalaNameEncoding("hello", "bar"), """{"@Foo":"hello","type":"bar"}""")
+  }
+
   def testSerialization[T](x: T, expected: String, context: SerializationContext = defaultContext)(implicit tag: ru.TypeTag[T]) = {
     val jValue = Serializer.serialize(x, context)
     org.json4s.jackson.JsonMethods.compact(jValue) should equal(expected)

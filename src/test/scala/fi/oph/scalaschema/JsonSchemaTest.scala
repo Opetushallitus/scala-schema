@@ -85,6 +85,9 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
         jsonSchemaOf(classOf[TraitsInFields]) should equal("""{"type":"object","properties":{"field":{"$ref":"#/definitions/traits"}},"id":"#traitsinfields","additionalProperties":false,"title":"Traits in fields","required":["field"],"definitions":{"impla":{"type":"object","properties":{},"id":"#impla","additionalProperties":false,"title":"Impl a"},"implb":{"type":"object","properties":{},"id":"#implb","additionalProperties":false,"title":"Impl b"},"traits":{"anyOf":[{"$ref":"#/definitions/impla"},{"$ref":"#/definitions/implb"}]}}}""")
       }
     }
+    "Fields requiring Scala name encoding" in {
+      jsonSchemaPropertiesOf(classOf[ScalaNameEncoding]) should equal("""{"@Foo":{"type":"string","minLength":1},"type":{"type":"string","minLength":1}}""")
+    }
     "JValues" - {
       "JValue" in {
         jsonSchemaOf[JValue] should equal("""{}""")
