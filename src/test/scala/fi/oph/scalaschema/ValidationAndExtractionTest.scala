@@ -89,6 +89,14 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         }
       }
     }
+    "Scala mangling" in {
+      val mangled = ScalaMangling("foo", "bar")
+      verifyExtractionRoundTrip(mangled)
+
+      verifyValidation[ScalaMangling](JObject(("@Foo" -> JObject()), ("type", JString("a"))), Left(List(
+        ValidationError("@Foo", JObject(), UnexpectedType("string"))
+      )))
+    }
     "Dates" in {
       val dates = Dates(
         LocalDate.parse("2015-12-30"),
