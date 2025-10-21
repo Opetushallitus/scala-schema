@@ -54,7 +54,8 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
                        extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
 
   def getPropertyValue(property: Property, target: AnyRef): AnyRef = {
-    target.getClass.getMethod(property.key).invoke(target)
+    val keyWithScalaNameEncoding = scala.reflect.NameTransformer.encode(property.key)
+    target.getClass.getMethod(keyWithScalaNameEncoding).invoke(target)
   }
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
 

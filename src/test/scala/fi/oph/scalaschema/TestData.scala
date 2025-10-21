@@ -26,6 +26,7 @@ case class Arrays(things: Array[Int])
 case class Objects(x: Strings)
 case class NestedDefinitions(x: Objects)
 case class Maps(things: Map[String, Int])
+case class ScalaNameEncoding(`@Foo`: String, `type`: String)
 
 @Description("Boom boom boom")
 case class WithDescription()
