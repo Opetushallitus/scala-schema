@@ -1,5 +1,7 @@
 package fi.oph.scalaschema
 
+import fi.oph.scalaschema.annotation.SkipSerialization
+
 import java.sql.Timestamp
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
@@ -124,6 +126,18 @@ class SerializationTest extends AnyFreeSpec with Matchers {
     testSerialization(ScalaNameEncoding("hello", "bar"), """{"@Foo":"hello","type":"bar"}""")
   }
 
+  "@SkipSerialization annotation" - {
+    "should exclude annotated fields from serialization" in {
+      val value = WithSkipSerialization("shown", Some("secret"))
+      testSerialization(value, """{"visible":"shown"}""")
+    }
+
+    "should omit annotated fields even if null" in {
+      val value = WithSkipSerialization("shown", None)
+      testSerialization(value, """{"visible":"shown"}""")
+    }
+  }
+
   def testSerialization[T](x: T, expected: String, context: SerializationContext = defaultContext)(implicit tag: ru.TypeTag[T]) = {
     val jValue = Serializer.serialize(x, context)
     org.json4s.jackson.JsonMethods.compact(jValue) should equal(expected)
@@ -137,3 +151,8 @@ case class ThingContainingTrait(x: TraitsWithFields)
 trait TraitsWithFields
 case class Impl1(x: String) extends TraitsWithFields
 case class Impl2(x: Int) extends TraitsWithFields
+
+case class WithSkipSerialization(
+  visible: String,
+  @SkipSerialization hidden: Option[String]
+)
