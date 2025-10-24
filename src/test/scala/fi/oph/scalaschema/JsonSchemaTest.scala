@@ -4,7 +4,7 @@ import com.github.fge.jsonschema.core.report.ListReportProvider
 import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import fi.oph.scalaschema.TestHelpers.schemaOf
-import fi.oph.scalaschema.annotation.EnumValue
+import fi.oph.scalaschema.annotation.{EnumValue, SkipSerialization}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
@@ -186,6 +186,14 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
         }
         "fails when case class has more than 1 required field" in {
           intercept[RuntimeException](jsonSchemaOf[ReadableFromTwoStrings])
+        }
+      }
+
+      "@SkipSerialization" - {
+        "fields annotated with @SkipSerialization should be omitted from generated JSON Schema" in {
+          val schema = SchemaFactory.default.createSchema(classOf[WithSkipSerialization])
+          val json = JsonMethods.compact(schema.toJson)
+          json should equal("""{"type":"object","properties":{"visible":{"type":"string","minLength":1}},"id":"#withskipserialization","additionalProperties":false,"title":"With skip serialization","required":["visible"]}""")
         }
       }
 

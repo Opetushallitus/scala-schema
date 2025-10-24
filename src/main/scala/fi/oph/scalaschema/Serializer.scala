@@ -4,6 +4,7 @@ import java.time.format.DateTimeFormatter.ISO_INSTANT
 import java.time.{LocalDate, LocalDateTime, ZoneId, ZonedDateTime, OffsetDateTime}
 import java.util.Date
 import fi.oph.scalaschema.SchemaPropertyProcessor.SchemaPropertyProcessor
+import fi.oph.scalaschema.annotation.SkipSerialization
 import fi.oph.scalaschema.extraction.SchemaNotFoundException
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
@@ -67,19 +68,26 @@ object Serializer {
     case _ => throw new RuntimeException("Not a Map: " + x)
   }
 
-  private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = JObject(s.properties.flatMap { p =>
-    context.propertyProcessor(s, p).flatMap { p =>
-      val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
-      serializeWithSchema(value, p.schema) match {
-        case JNothing => if (context.omitEmptyFields) {
-          None
-        } else {
-          Some(JField(p.key, JNull))
+  private def serializeObject(s: ClassSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = {
+    val visibleProperties = s.properties.filterNot(_.metadata.exists(_.isInstanceOf[SkipSerialization]))
+    JObject(visibleProperties.flatMap { p =>
+      context.propertyProcessor(s, p).flatMap { p =>
+        val value = s.getPropertyValue(p, x.asInstanceOf[AnyRef])
+        serializeWithSchema(value, p.schema) match {
+          case JNothing => if (context.omitEmptyFields) {
+            None
+          } else {
+            Some(JField(p.key, JNull))
+          }
+          case jValue => Some(JField(p.key, jValue))
         }
-        case jValue => Some(JField(p.key, jValue))
       }
-    }
-  } ++ (if(context.includeClassReferences) { List(JField("$class", JString(s.fullClassName))) } else { Nil }))
+    } ++ (if (context.includeClassReferences) {
+      List(JField("$class", JString(s.fullClassName)))
+    } else {
+      Nil
+    }))
+  }
 
   def serializeString(x: Any): JValue = x match {
     case x: String => JString(x)

@@ -1,6 +1,6 @@
 package fi.oph.scalaschema
 
-import fi.oph.scalaschema.annotation.DefaultValue
+import fi.oph.scalaschema.annotation.{DefaultValue, SkipSerialization}
 import org.json4s.ext.JodaTimeSerializers
 import org.json4s.{DefaultFormats, Extraction, Formats}
 import org.json4s.JsonAST._
@@ -67,7 +67,8 @@ object SchemaToJson {
   }
 
   private def toJsonProperties(properties: List[Property]): JValue = {
-    JObject(properties.map { property =>
+    val visibleProperties = properties.filterNot(_.metadata.exists(_.isInstanceOf[SkipSerialization]))
+    JObject(visibleProperties.map { property =>
         (property.key, appendMetadata(appendMetadata(toJsonSchemaWithoutMetadata(property.schema), property.metadata), property.schema.metadata))
     })
   }
