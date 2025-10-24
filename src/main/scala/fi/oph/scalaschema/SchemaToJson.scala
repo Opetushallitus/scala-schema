@@ -5,6 +5,19 @@ import org.json4s.ext.JodaTimeSerializers
 import org.json4s.{DefaultFormats, Extraction, Formats}
 import org.json4s.JsonAST._
 
+object SchemaFilters {
+  def stripSkipSerialization(schema: Schema): Schema =
+    schema.mapItems {
+      case cs: ClassSchema =>
+        val filteredDefs = cs.definitions.map(d => stripSkipSerialization(d).asInstanceOf[SchemaWithClassName])
+        cs.copy(
+          properties = cs.properties.filterNot(_.metadata.exists(_.isInstanceOf[SkipSerialization])),
+          definitions = filteredDefs
+        )
+      case other => other
+    }
+}
+
 object SchemaToJson {
   private implicit val jsonFormats: Formats = new DefaultFormats {
     override def dateFormatter = {
@@ -15,7 +28,8 @@ object SchemaToJson {
   } ++ JodaTimeSerializers.all
 
   def toJsonSchema(t: Schema): JObject = {
-    appendMetadata(toJsonSchemaWithoutMetadata(t), t.metadata)
+    val cleaned = SchemaFilters.stripSkipSerialization(t)
+    appendMetadata(toJsonSchemaWithoutMetadata(cleaned), t.metadata)
   }
 
   private def toJsonSchemaWithoutMetadata(t: Schema): JObject = t match {
@@ -67,11 +81,11 @@ object SchemaToJson {
   }
 
   private def toJsonProperties(properties: List[Property]): JValue = {
-    val visibleProperties = properties.filterNot(_.metadata.exists(_.isInstanceOf[SkipSerialization]))
-    JObject(visibleProperties.map { property =>
+    JObject(properties.map { property =>
         (property.key, appendMetadata(appendMetadata(toJsonSchemaWithoutMetadata(property.schema), property.metadata), property.schema.metadata))
     })
   }
+
   private def toRequiredProperties(properties: List[Property]): Option[(String, JValue)] = {
     val requiredProperties = properties.toList.filter(property => !property.schema.isInstanceOf[OptionalSchema] && !property.metadata.find{_.isInstanceOf[DefaultValue]}.isDefined)
     requiredProperties match {
