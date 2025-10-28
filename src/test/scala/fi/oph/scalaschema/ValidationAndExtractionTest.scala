@@ -576,7 +576,7 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
     val json = Serializer.serialize(input, SerializationContext(SchemaFactory.default))
     val result = SchemaValidatingExtractor.extract[T](JsonMethods.compact(json))
     result should equal(Right(input))
-    result.right.get
+    result.getOrElse(throw new InternalError("internal error"))
   }
 }
 

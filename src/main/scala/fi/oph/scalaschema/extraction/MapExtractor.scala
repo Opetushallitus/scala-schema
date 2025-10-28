@@ -14,7 +14,7 @@ object MapExtractor {
 
       val errors: List[ValidationError] = valueResults.collect { case Left(errors) => errors }.flatten
       errors match {
-        case Nil => Right(valueResults.map(_.right.get).toMap)
+        case Nil => Right(valueResults.collect { case Right(value) => value }.toMap)
         case _ => Left(errors)
       }
     case _ => Left(List(ValidationError(cursor.path, cursor.json, UnexpectedType("object"))))
