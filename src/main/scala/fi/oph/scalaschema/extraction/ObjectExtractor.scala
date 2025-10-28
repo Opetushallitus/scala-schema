@@ -86,7 +86,7 @@ object ObjectExtractor {
         val errors: List[ValidationError] = propertyResults.collect { case Left(errors) => errors }.flatten ++ unexpectedProperties
         errors match {
           case Nil =>
-            Right(instantiateCaseClass(cursor.path, cs.fullClassName, propertyResults.map(_.right.get)))
+            Right(instantiateCaseClass(cursor.path, cs.fullClassName, propertyResults.collect { case Right(value) => value }))
           case _ =>
             Left(errors)
         }

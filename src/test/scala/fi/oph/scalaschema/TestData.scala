@@ -3,10 +3,9 @@ package fi.oph.scalaschema
 import java.sql.Timestamp
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.Date
-
 import fi.oph.scalaschema.annotation._
 import org.joda.time.DateTime
-import org.json4s.JValue
+import org.json4s.{JArray, JValue}
 
 case class RequiredFields(field: Boolean)
 case class OptionalFields(field: Option[Boolean])
@@ -21,6 +20,7 @@ case class StringOptions(value: Option[String])
 case class Strings(s: String)
 case class Dates(a: LocalDate, b: ZonedDateTime, c: Date, d: Timestamp, e: DateTime, f: LocalDateTime)
 case class Lists(things: List[Int])
+case class ListsWithSingleValueAsArray(@DeserializeSingleValueAsArray things: List[Int])
 case class Seqs(things: Seq[Int])
 case class Arrays(things: Array[Int])
 case class Objects(x: Strings)
@@ -135,3 +135,17 @@ case class ReadableFromTwoStrings(value: String, value2: String)
 
 trait MaybeReadableFromString
 case class OtherCase(number: Int) extends MaybeReadableFromString
+
+case class StringAsArray(
+  @DeserializeSingleValueAsArray
+  value: List[String]
+)
+
+case class StringNotAsArray(
+  value: List[String]
+)
+
+case class ObjectAsArray(
+  @DeserializeSingleValueAsArray
+  value: List[Booleans]
+)

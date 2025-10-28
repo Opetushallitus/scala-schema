@@ -70,6 +70,9 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
       "Array" in {
         jsonSchemaPropertiesOf(classOf[Arrays]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
       }
+      "List accepting single value as array" in {
+        jsonSchemaPropertiesOf(classOf[ListsWithSingleValueAsArray]) should equal("""{"things":{"type":"array","items":{"type":"number"},"description":"(when deserializing also accepts a single value)"}}""")
+      }
     }
     "Maps" in {
       jsonSchemaPropertiesOf(classOf[Maps]) should equal("""{"things":{"type":"object","patternProperties":{".*":{"type":"number"}}}}""")

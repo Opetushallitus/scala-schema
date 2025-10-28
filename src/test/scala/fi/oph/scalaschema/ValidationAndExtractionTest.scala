@@ -60,6 +60,35 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
           ValidationError("stuff.1", JString("b"), UnexpectedType("number"))
         )))
       }
+      "String or array" in {
+        verifyExtractionRoundTrip[StringAsArray](StringAsArray(List("foobar", "barfoo")))
+
+        val inputSingleItemArray = JObject("value" -> JArray(List(JString("john"))))
+        val inputMultiItemArray = JObject("value" -> JArray(List(JString("john"), JString("peter"), JString("steve"))))
+        val inputEmptyArray = JObject("value" -> JArray(List()))
+        val inputString = JObject("value" -> JString("john"))
+
+        verifyValidation[StringAsArray](inputSingleItemArray, Right(StringAsArray(List("john"))), ExtractionContext(SchemaFactory.default))
+        verifyValidation[StringAsArray](inputMultiItemArray, Right(StringAsArray(List("john", "peter", "steve"))), ExtractionContext(SchemaFactory.default))
+        verifyValidation[StringAsArray](inputEmptyArray, Right(StringAsArray(List())), ExtractionContext(SchemaFactory.default))
+        verifyValidation[StringAsArray](inputString, Right(StringAsArray(List("john"))), ExtractionContext(SchemaFactory.default))
+
+        verifyValidation[StringNotAsArray](inputSingleItemArray, Right(StringNotAsArray(List("john"))), ExtractionContext(SchemaFactory.default))
+        verifyValidation[StringNotAsArray](inputMultiItemArray, Right(StringNotAsArray(List("john", "peter", "steve"))), ExtractionContext(SchemaFactory.default))
+        verifyValidation[StringNotAsArray](inputEmptyArray, Right(StringNotAsArray(List())), ExtractionContext(SchemaFactory.default))
+        verifyValidation[StringNotAsArray](inputString, Left(List(
+          ValidationError("value", JString("john"), UnexpectedType("array"))
+        )), ExtractionContext(SchemaFactory.default))
+      }
+      "Object or array" in {
+        verifyExtractionRoundTrip[ObjectAsArray](ObjectAsArray(List(Booleans(true), Booleans(false))))
+
+        val inputMultiItemArray = JObject("value" -> JArray(List(JObject("field" -> JBool(false)), JObject("field" -> JBool(true)))))
+        val inputSingleItem = JObject("value" -> JObject("field" -> JBool(false)))
+
+        verifyValidation[ObjectAsArray](inputMultiItemArray, Right(ObjectAsArray(List(Booleans(false), Booleans(true)))), ExtractionContext(SchemaFactory.default))
+        verifyValidation[ObjectAsArray](inputSingleItem, Right(ObjectAsArray(List(Booleans(false)))), ExtractionContext(SchemaFactory.default))
+      }
     }
     "Strings" - {
       "Extracts string" in {
@@ -547,7 +576,7 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
     val json = Serializer.serialize(input, SerializationContext(SchemaFactory.default))
     val result = SchemaValidatingExtractor.extract[T](JsonMethods.compact(json))
     result should equal(Right(input))
-    result.right.get
+    result.getOrElse(throw new InternalError("internal error"))
   }
 }
 
