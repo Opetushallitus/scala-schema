@@ -6,7 +6,7 @@ import fi.oph.scalaschema.extraction.ValidationError
 import org.json4s.jackson.JsonMethods
 
 object ValidationExample extends App {
-  implicit val context = ExtractionContext(SchemaFactory.default)
+  implicit val context: ExtractionContext = ExtractionContext(SchemaFactory.default)
 
   println("*** Successful object extraction ***")
   val validInput = JsonMethods.parse("""{"name": "john", "stuff": [1,2,3]}""")
@@ -20,7 +20,7 @@ object ValidationExample extends App {
 case class ValidationTestClass(name: String, stuff: List[Int])
 
 object ReadFlattenedExample extends App {
-  implicit val context = ExtractionContext(SchemaFactory.default)
+  implicit val context: ExtractionContext = ExtractionContext(SchemaFactory.default)
   println("All of the below will be successfully extracted as FlattenableCat")
   println(SchemaValidatingExtractor.extract[FlattenableCat](""""john""""))
   println(SchemaValidatingExtractor.extract[FlattenableCat]("""{"name": "john"}"""))

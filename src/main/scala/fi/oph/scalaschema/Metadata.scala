@@ -27,6 +27,7 @@ trait JsonMetadataSupport {
       case JString(s) if s.endsWith(".") => s + " " + newDescription
       case JString(s) => s + ". " + newDescription
       case JNothing => newDescription
+      case _ => newDescription
     }
     obj.merge(JObject("description" -> JString(description)))
   }

@@ -68,7 +68,7 @@ case class SchemaFactory() {
       }
       MapSchema(createSchema(typeArgs(tpe)(1), state))
     } else if (isListType(tpe)) {
-      // (Traversable)[T] becomes a schema with items set to the schema of T
+      // (Iterable)[T] becomes a schema with items set to the schema of T
       ListSchema(createSchema(typeArgs(tpe).head, state))
     } else {
       schemaTypeForScala.getOrElse(typeName, {
@@ -269,7 +269,13 @@ case class SchemaFactory() {
   }
 
   private def isListType(tpe: ru.Type): Boolean = {
-    getBaseClasses(tpe).exists(s => s == "scala.collection.Traversable" ||
+    getBaseClasses(tpe).exists(s =>
+      s == "scala.collection.Iterable" ||
+      s == "scala.collection.IterableOnce" ||
+      s == "scala.collection.IterableOnceOps" ||
+      s == "scala.collection.IterableOps" ||
+      s == "scala.collection.immutable.Iterable" ||
+      s == "scala.collection.mutable.Iterable" ||
       s == "scala.Array" ||
       s == "scala.Seq" ||
       s == "scala.List" ||
@@ -302,7 +308,7 @@ private object MemberFinder {
 }
 
 private object TraitImplementationFinder {
-  import collection.JavaConverters._
+  import scala.jdk.CollectionConverters._
   val cache: collection.mutable.Map[String, List[Class[_]]] = collection.mutable.Map.empty
   val reflectionsCache: collection.mutable.Map[String, Reflections] = collection.mutable.Map.empty
 

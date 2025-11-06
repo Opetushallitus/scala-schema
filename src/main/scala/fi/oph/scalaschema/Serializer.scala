@@ -58,9 +58,9 @@ object Serializer {
   }
 
   private def serializeList(s: ListSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {
-    case xs: Traversable[_] => JArray(xs.toList.map { x => serializeWithSchema(x, s.itemSchema)})
+    case xs: Iterable[_] => JArray(xs.toList.map { x => serializeWithSchema(x, s.itemSchema)})
     case xs: Array[_] => JArray(xs.toList.map { x => serializeWithSchema(x, s.itemSchema)})
-    case _ => throw new RuntimeException("Not a Traversable or Array: " + x)
+    case _ => throw new RuntimeException("Not an Iterable or Array: " + x)
   }
 
   private def serializeMap(s: MapSchema, x: Any)(implicit context: SerializationContext, rootSchema: Schema): JValue = x match {

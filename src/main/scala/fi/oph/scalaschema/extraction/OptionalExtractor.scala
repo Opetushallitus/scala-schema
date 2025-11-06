@@ -11,6 +11,6 @@ object OptionalExtractor {
         case Some(v) => Right(v)
         case _ => Right(None)
       }
-    case _ => SchemaValidatingExtractor.extract(cursor, schema.itemSchema, metadata).right.map(value => Some(value))
+    case _ => SchemaValidatingExtractor.extract(cursor, schema.itemSchema, metadata).map(value => Some(value))
   }
 }

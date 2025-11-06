@@ -148,7 +148,7 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         verifyExtractionRoundTrip(MoreNumbers(1, 1, 1, 1, 1, 1))
       }
       "Java numbers" in {
-        verifyExtractionRoundTrip(JavaNumbers(1, 1f, 1l, 1d, bigDecimal(1)))
+        verifyExtractionRoundTrip(JavaNumbers(1, 1f, 1L, 1d, bigDecimal(1)))
       }
       "In lists" in {
         val result = verifyExtractionRoundTrip(MoreNumbersInLists(List(1), List(1), List(1), List(1), List(1), List(1)))

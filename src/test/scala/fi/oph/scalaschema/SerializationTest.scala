@@ -18,7 +18,7 @@ class SerializationTest extends AnyFreeSpec with Matchers {
     testSerialization(Strings("a"), """{"s":"a"}""")
   }
   "numbers" in {
-    testSerialization(Numbers(1, 1l, 0.4f, 1.1), """{"a":1,"b":1,"c":0.4000000059604645,"d":1.1}""")
+    testSerialization(Numbers(1, 1L, 0.4f, 1.1), """{"a":1,"b":1,"c":0.4000000059604645,"d":1.1}""")
   }
 
   "StringOptions" in {
@@ -111,7 +111,7 @@ class SerializationTest extends AnyFreeSpec with Matchers {
 
   "custom field filtering" in {
     def skipOtherThanA(s: ClassSchema, p: Property) = if (p.key == "a") List(p) else Nil
-    testSerialization(Numbers(1, 1l, 0.4f, 1.1), """{"a":1}""", context = SerializationContext(SchemaFactory.default, propertyProcessor = skipOtherThanA))
+    testSerialization(Numbers(1, 1L, 0.4f, 1.1), """{"a":1}""", context = SerializationContext(SchemaFactory.default, propertyProcessor = skipOtherThanA))
   }
 
   "@Flatten annotation" in {

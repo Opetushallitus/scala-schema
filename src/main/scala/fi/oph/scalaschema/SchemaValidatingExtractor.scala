@@ -18,7 +18,7 @@ object SchemaValidatingExtractor {
         case _ => json
       }
     }
-    extract(dta, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[T])
+    extract(dta, rootSchema, Nil)(context, rootSchema).map(_.asInstanceOf[T])
   }
 
   def extract[T](json: String)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
@@ -38,9 +38,9 @@ object SchemaValidatingExtractor {
   def extract(json: JValue, klass: Class[_])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     val rootSchema = context.schemaFactory.createSchema(klass.getName)
     if (context.stripClassReferences) {
-      extract(removeJsonField(json, "$class"), rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[AnyRef])
+      extract(removeJsonField(json, "$class"), rootSchema, Nil)(context, rootSchema).map(_.asInstanceOf[AnyRef])
     } else {
-      extract(json, rootSchema, Nil)(context, rootSchema).right.map(_.asInstanceOf[AnyRef])
+      extract(json, rootSchema, Nil)(context, rootSchema).map(_.asInstanceOf[AnyRef])
     }
   }
 
@@ -88,7 +88,6 @@ object SchemaValidatingExtractor {
       doExtract
   }
 }
-
 
 
 
