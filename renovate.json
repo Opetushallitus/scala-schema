@@ -1,0 +1,57 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":preserveSemverRanges"
+  ],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "prConcurrentLimit": 4,
+  "platformAutomerge": false,
+  "rangeStrategy": "replace",
+  "packageRules": [
+    {
+      "description": "Disable major updates by default",
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Group json4s updates",
+      "matchPackageNames": [
+        "org.json4s:json4s-jackson_2.13",
+        "org.json4s:json4s-ast_2.13",
+        "org.json4s:json4s-ext_2.13"
+      ],
+      "groupName": "json4s"
+    },
+    {
+      "description": "Group Scala updates",
+      "matchPackageNames": [
+        "org.scala-lang:scala-library",
+        "org.scala-lang:scala-reflect",
+        "org.scala-lang:scala-compiler"
+      ],
+      "groupName": "scala"
+    },
+    {
+      "description": "Allow major updates for GitHub Actions and CI images",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "enabled": true
+    },
+    {
+      "description": "Allow major updates for Docker/CI images",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["major"],
+      "enabled": true
+    },
+    {
+      "description": "Wait 3 days before updating Maven dependencies",
+      "matchManagers": ["maven"],
+      "minimumReleaseAge": "3 days"
+    }
+  ]
+}
