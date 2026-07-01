@@ -362,21 +362,28 @@ object Annotations {
     def parseAsInteger(v: Any) = Integer.valueOf(v.toString.toDouble.toInt)
     def parseAsBoolean(v: Any) = Boolean.box(v.toString.toBoolean)
 
-    def parseAnnotationParam(klass: Class[_], value: ru.Tree): AnyRef = (klass, value) match {
-      case (_, value) if (value.toString.startsWith("\"")) => unescapeJava(value)
-      case (_, value) if (value.toString == "scala.None") => None
-      case (DoubleClass, value) => parseAsDouble(value)
-      case (IntegerClass, value) => parseAsInteger(value)
-      case (BooleanClass, value) => parseAsBoolean(value)
-      case (tyep, value) =>
-        Try(parseAsInteger(value.toString.toInt))
-          .orElse(Try(parseAsDouble(value.toString.toDouble)))
-          .orElse(Try(parseAsBoolean(value.toString.toBoolean)))
-          .getOrElse {
-            val evaluated = tb.eval(tb.untypecheck(value))
-            //println("Expensive: " + annotationClass.getName + " / " + tyep.getName + " = " + value)
-            evaluated.asInstanceOf[AnyRef]
-          }
+    def parseAnnotationParam(klass: Class[_], rawValue: ru.Tree): AnyRef = {
+      val value = rawValue match {
+        case namedArg: ru.NamedArgApi => namedArg.rhs.asInstanceOf[ru.Tree]
+        case other => other
+      }
+
+      (klass, value) match {
+        case (_, value) if (value.toString.startsWith("\"")) => unescapeJava(value)
+        case (_, value) if (value.toString == "scala.None") => None
+        case (DoubleClass, value) => parseAsDouble(value)
+        case (IntegerClass, value) => parseAsInteger(value)
+        case (BooleanClass, value) => parseAsBoolean(value)
+        case (tyep, value) =>
+          Try(parseAsInteger(value.toString.toInt))
+            .orElse(Try(parseAsDouble(value.toString.toDouble)))
+            .orElse(Try(parseAsBoolean(value.toString.toBoolean)))
+            .getOrElse {
+              val evaluated = tb.eval(tb.untypecheck(value))
+              //println("Expensive: " + annotationClass.getName + " / " + tyep.getName + " = " + value)
+              evaluated.asInstanceOf[AnyRef]
+            }
+      }
     }
 
     val constructorParams: Array[Object] = constructor.getParameterTypes.zipWithIndex
