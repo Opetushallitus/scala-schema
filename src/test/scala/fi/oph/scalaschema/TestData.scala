@@ -60,6 +60,29 @@ case class WithTraitWithSyntheticProperties() extends TraitWithSyntheticProperti
 case class WithComplexHierarchyOfTraitsWithSyntheticProperties() extends SomeSubTrait with OtherSubTrait
 case class WithOverriddenSyntheticProperties(override val field: Boolean) extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties
 
+case class LeafComputedProperty(value: String) {
+  @ComputedProperty
+  def leafComputedValue: String = "leaf-computed-value"
+}
+
+case class MiddleComputedProperty(leaf: LeafComputedProperty) {
+  @ComputedProperty
+  def middleComputedValue: String = "middle-computed-value"
+}
+
+@IncludeComputedProperty(classOf[RootWithRootAndLeafComputedProperties], "rootComputedValue")
+@IncludeComputedProperty(classOf[LeafComputedProperty], "leafComputedValue")
+case class RootWithRootAndLeafComputedProperties(middle: MiddleComputedProperty) {
+  @ComputedProperty
+  def rootComputedValue: String = "root-computed-value"
+}
+
+@IncludeComputedProperty(classOf[MiddleComputedProperty], "middleComputedValue")
+case class RootWithMiddleComputedProperty(middle: MiddleComputedProperty) {
+  @ComputedProperty
+  def rootComputedValue: String = "root-computed-value"
+}
+
 trait TraitWithSyntheticProperties {
   @SyntheticProperty
   @Description("synthetic field")

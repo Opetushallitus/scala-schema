@@ -38,8 +38,17 @@ case class SchemaFactory() {
     getCachedSchema(tag.tpe)
   }
 
+  def createSchema(classRef: ClassRefSchema, rootSchema: Schema): SchemaWithClassName = {
+    rootSchema match {
+      case s: SchemaWithDefinitions =>
+        s.findSchemaForClassRef(classRef).getOrElse(createSchema(classRef.fullClassName))
+      case _ =>
+        createSchema(classRef.fullClassName)
+    }
+  }
+
   private def getCachedSchema(tpe: ru.Type) = synchronized {
-    cachedSchemas.getOrElseUpdate(tpe, createSchema(tpe, ScanState()))
+    cachedSchemas.getOrElseUpdate(tpe, createSchema(tpe, ScanState.fromRootSchemaType(tpe)))
   }
 
   private val typeByNameCache: collection.mutable.Map[String, ru.Type] = collection.mutable.Map.empty
@@ -50,9 +59,37 @@ case class SchemaFactory() {
     })
   }
 
-  private case class ScanState(root: Boolean = true, foundTypes: collection.mutable.Set[String] = collection.mutable.Set.empty, createdTypes: collection.mutable.Set[SchemaWithClassName] = collection.mutable.Set.empty) {
+  private case class IncludedComputedProperty(ownerClassName: String, propertyName: String)
+  private case class ScanState(
+    root: Boolean,
+    foundTypes: collection.mutable.Set[String],
+    createdTypes: collection.mutable.Set[SchemaWithClassName],
+    includedComputedProperties: Set[IncludedComputedProperty]
+  ) {
     def childState = copy(root = false)
   }
+
+  private object ScanState {
+    def fromRootSchemaType(tpe: ru.Type): ScanState =
+      ScanState(
+        root = true,
+        foundTypes = collection.mutable.Set.empty,
+        createdTypes = collection.mutable.Set.empty,
+        includedComputedProperties = readIncludedComputedPropertiesFromSchemaType(tpe)
+      )
+  }
+
+  private def findAnnotationsOfType[A <: StaticAnnotation](symbol: ru.Symbol)(implicit tag: ru.TypeTag[A]): List[A] =
+    findAnnotations(symbol, { annotationSymbol => annotationSymbol == ru.typeOf[A].typeSymbol })
+      .map(_.asInstanceOf[A])
+
+  private def hasAnnotation[A <: StaticAnnotation](symbol: ru.Symbol)(implicit tag: ru.TypeTag[A]): Boolean =
+    findAnnotationsOfType[A](symbol).nonEmpty
+
+  private def readIncludedComputedPropertiesFromSchemaType(tpe: ru.Type): Set[IncludedComputedProperty] =
+    findAnnotationsOfType[IncludeComputedProperty](tpe.typeSymbol)
+      .map(annotation => IncludedComputedProperty(annotation.owner.getName, annotation.propertyName))
+      .toSet
 
   private def createSchema(tpe: ru.Type, state: ScanState): Schema = {
     val typeName = tpe.typeSymbol.fullName
@@ -186,7 +223,16 @@ case class SchemaFactory() {
     val constructorParams: List[(ru.Symbol, Boolean)] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil).map((_, false))
     val syntheticProperties: List[(ru.Symbol, Boolean)] = (members(tpe) ++ traits.flatMap(members))
       .filter(_.isMethod)
-      .filter (findAnnotations(_, { symbol => symbol == ru.typeOf[SyntheticProperty].typeSymbol}).nonEmpty)
+      .filter { symbol =>
+        val propertyIsComputed = hasAnnotation[ComputedProperty](symbol)
+        val propertyIsSynthetic = hasAnnotation[SyntheticProperty](symbol)
+        val computedPropertyIsIncluded =
+          propertyIsComputed && state.includedComputedProperties.contains(
+            IncludedComputedProperty(className, symbol.name.decodedName.toString.trim)
+          )
+
+        (!propertyIsComputed && propertyIsSynthetic) || (propertyIsComputed && computedPropertyIsIncluded)
+      }
       .map(sym => (sym.name, sym)).toMap.values.toList // <- deduplicate by term name
       .filterNot(sym => constructorParams.map(_._1.name).contains(sym.name)) // <- remove if overridden in case class constructor
       .map((_, true))
@@ -197,13 +243,14 @@ case class SchemaFactory() {
       val term = paramSymbol.asTerm
       val termSchema = createSchema(term.typeSignature, state.childState)
       val termName: String = term.name.decodedName.toString.trim
+      val computed = hasAnnotation[ComputedProperty](paramSymbol)
       val ownerTrait = paramSymbol.owner.isAbstract match {
         case true =>
           Some(paramSymbol.owner)
         case false =>
           None
       }
-      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil, synthetic))
+      val property = applyMetadataAnnotations(term, Property(termName, termSchema, Nil, synthetic, computed))
       val matchingMethodsFromTraits = traits.flatMap (t => members(t)
         .filter(_.isMethod)
         .filter(_.asTerm.asMethod.name.toString == termName )

@@ -8,9 +8,18 @@ import org.json4s.jackson.JsonMethods
 
 object AnyOfExtractor {
   private def criteriaForSchema(schema: SchemaWithClassName, cursor: JsonCursor)(implicit context: ExtractionContext) = context.criteriaCache.synchronized {
-    context.criteriaCache.getOrElseUpdate(schema.fullClassName + ":" + schema.getClass.getName, {
+    context.criteriaCache.getOrElseUpdate(criteriaCacheKey(schema), {
       discriminatorCriteria(cursor.path, schema, KeyPath.root)
     })
+  }
+
+  private def criteriaCacheKey(schema: SchemaWithClassName)(implicit context: ExtractionContext): String = {
+    def schemaKey(schema: Schema): String = schema match {
+      case schema: SchemaWithClassName => schema.fullClassName + ":" + schema.getClass.getName
+      case _ => schema.getClass.getName
+    }
+
+    schemaKey(schema) + ":" + context.rootSchema.map(schemaKey).getOrElse("no-root")
   }
 
   def extractAnyOf(cursor: JsonCursor, as: AnyOfSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
@@ -45,7 +54,7 @@ object AnyOfExtractor {
 
   private def discriminatorCriteria(contextPath: String, schema: Schema, keyPath: KeyPath)(implicit context: ExtractionContext): DiscriminatorCriterion = schema match {
     case s: ClassRefSchema =>
-      discriminatorCriteria(contextPath, s.resolve(context.schemaFactory), keyPath)
+      discriminatorCriteria(contextPath, context.createSchema(s), keyPath)
     case s: ClassSchema if s.readFlattened.isDefined => OneOfCriteria(s.asAnyOfSchema.alternatives.map(alt => discriminatorCriteria(contextPath, alt, keyPath)))
     case s: ClassSchema =>
       val discriminatorProps: List[Property] = s.properties.filter(_.metadata.contains(Discriminator()))
@@ -87,7 +96,7 @@ object AnyOfExtractor {
       case s: StringSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: NumberSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
       case s: BooleanSchema if s.enumValues.isDefined => List(PropertyEnumValues(propertyPath, s, s.enumValues.get))
-      case s: ClassRefSchema => propertyMatchers(contextPath, keyPath, property.copy(schema = s.resolve(context.schemaFactory)))
+      case s: ClassRefSchema => propertyMatchers(contextPath, keyPath, property.copy(schema = context.createSchema(s)))
       case s: ClassSchema =>
         List(PropertyExists(propertyPath)) ++ s.properties.flatMap { nestedProperty =>
           discriminatorCriteria(JsonCursor.subPath(contextPath, nestedProperty.key), s, propertyPath) match {
