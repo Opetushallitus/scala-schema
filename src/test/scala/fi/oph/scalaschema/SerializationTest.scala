@@ -82,6 +82,24 @@ class SerializationTest extends AnyFreeSpec with Matchers {
     testSerialization(WithOverriddenSyntheticProperties(false), """{"field":false}""")
   }
 
+  "computed properties" - {
+    "included computed properties are serialized through class references" in {
+      testSerialization(
+        RootWithIncludedComputedProperty(ReferencedWithComputedProperty("value")),
+        """{"child":{"value":"value","computedValue":"computed-value"}}""",
+        SerializationContext(SchemaFactory())
+      )
+    }
+
+    "computed properties are not serialized when the owner class is the schema root" in {
+      testSerialization(
+        ReferencedWithComputedProperty("value"),
+        """{"value":"value"}""",
+        SerializationContext(SchemaFactory())
+      )
+    }
+  }
+
   "empty optional" in {
     val json = Serializer.serialize(WithOptionalDiscriminator("name", None), defaultContext)
     json should equal(JObject("name" -> JString("name")))

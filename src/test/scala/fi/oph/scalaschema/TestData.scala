@@ -60,6 +60,13 @@ case class WithTraitWithSyntheticProperties() extends TraitWithSyntheticProperti
 case class WithComplexHierarchyOfTraitsWithSyntheticProperties() extends SomeSubTrait with OtherSubTrait
 case class WithOverriddenSyntheticProperties(override val field: Boolean) extends TraitWithSyntheticProperties with OtherTraitWithSyntheticProperties
 
+case class ReferencedWithComputedProperty(value: String) {
+  @ComputedProperty
+  def computedValue: String = s"computed-$value"
+}
+@IncludeComputedProperty(owner = classOf[ReferencedWithComputedProperty], propertyName = "computedValue")
+case class RootWithIncludedComputedProperty(child: ReferencedWithComputedProperty)
+
 trait TraitWithSyntheticProperties {
   @SyntheticProperty
   @Description("synthetic field")

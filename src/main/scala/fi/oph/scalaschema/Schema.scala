@@ -131,6 +131,25 @@ sealed trait SchemaWithDefinitions extends SchemaWithClassName {
   def definitions: List[SchemaWithClassName]
   def withDefinitions(definitions: List[SchemaWithClassName]): SchemaWithDefinitions
   def moveDefinitionsToTopLevel: SchemaWithDefinitions
+
+  // ClassRefSchema points to a class schema by name. When a class ref appears inside a
+  // root schema, the concrete class schema may already have been created while scanning
+  // that root. The root schema's definitions contain schemas found through the root's
+  // fields, their fields, and so on.
+  //
+  // This matters for root-specific schema features such as @IncludeComputedProperty.
+  // During the root scan, child schema creation receives the same ScanState, so the child
+  // schemas in definitions preserve the root-specific included computed property
+  // configuration. Resolving the same class ref directly through SchemaFactory would use
+  // the referenced class as its own root schema and lose that configuration.
+  private[scalaschema] def findSchemaForClassRef(classRef: ClassRefSchema): Option[SchemaWithClassName] = {
+    if (fullClassName == classRef.fullClassName) {
+      Some(this)
+    } else {
+      definitions.find(_.fullClassName == classRef.fullClassName)
+    }
+  }
+
   protected [scalaschema] def definitionsCollectedFromDefinitions: List[SchemaWithClassName] = this.definitions.flatMap { definitionSchema =>
     val (defschema2, defs) = definitionSchema.collectDefinitions
     defschema2.asInstanceOf[SchemaWithClassName] :: defs
@@ -159,7 +178,7 @@ sealed trait SchemaWithClassName extends Schema {
   def resolve(factory: SchemaFactory): SchemaWithClassName
 }
 
-case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false) extends ObjectWithMetadata[Property] {
+case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false, computed: Boolean = false) extends ObjectWithMetadata[Property] {
   def replaceMetadata(metadata: List[Metadata]) =
     copy(
       metadata = metadata,
