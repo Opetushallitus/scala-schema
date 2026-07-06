@@ -31,7 +31,7 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
   private[scalaschema] def createSchema(classRef: ClassRefSchema): SchemaWithClassName =
     rootSchema match {
       case Some(root) => schemaFactory.createSchema(classRef, root)
-      case None => schemaFactory.createSchema(classRef.fullClassName)
+      case None => schemaFactory.createSchemaWithoutRootSchema(classRef)
     }
 }
 

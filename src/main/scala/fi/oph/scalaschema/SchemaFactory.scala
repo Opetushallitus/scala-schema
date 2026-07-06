@@ -41,11 +41,21 @@ case class SchemaFactory() {
   def createSchema(classRef: ClassRefSchema, rootSchema: Schema): SchemaWithClassName = {
     rootSchema match {
       case s: SchemaWithDefinitions =>
-        s.findSchemaForClassRef(classRef).getOrElse(createSchema(classRef.fullClassName))
+        s.findSchemaForClassRef(classRef).getOrElse(createSchemaWithoutRootSchema(classRef))
       case _ =>
-        createSchema(classRef.fullClassName)
+        createSchemaWithoutRootSchema(classRef)
     }
   }
+
+  private[scalaschema] def createSchemaWithoutRootSchema(classRef: ClassRefSchema): SchemaWithClassName =
+    classRef.definitionKey.variantQualifier match {
+      case Some(_) =>
+        throw new IllegalArgumentException(
+          s"Path-specific schema ref ${classRef.definitionName} for ${classRef.fullClassName} was not found in root schema definitions"
+        )
+      case None =>
+        createSchema(classRef.fullClassName)
+    }
 
   private def getCachedSchema(tpe: ru.Type) = synchronized {
     cachedSchemas.getOrElseUpdate(tpe, createSchema(tpe, ScanState.fromRootSchemaType(tpe)))
@@ -59,23 +69,51 @@ case class SchemaFactory() {
     })
   }
 
-  private case class IncludedComputedProperty(ownerClassName: String, propertyName: String)
+  private case class IncludedComputedProperty(ownerClassName: String, propertySuffixPath: List[String]) {
+    def matchesProperty(ownerClassNames: List[String], candidatePath: List[String]): Boolean =
+      ownerClassNames.contains(this.ownerClassName) &&
+        candidatePath.endsWith(propertySuffixPath)
+  }
+
+  private object IncludedComputedProperty {
+    def fromAnnotation(annotation: IncludeComputedProperty): IncludedComputedProperty =
+      IncludedComputedProperty(annotation.owner.getName, parsePropertySuffixPath(annotation.propertySuffixPath))
+
+    private def parsePropertySuffixPath(propertySuffixPath: String): List[String] =
+      propertySuffixPath.split("\\.").map(_.trim).filter(_.nonEmpty).toList match {
+        case Nil => throw new RuntimeException("@IncludeComputedProperty propertySuffixPath must not be empty")
+        case pathSegments => pathSegments
+      }
+  }
+
   private case class ScanState(
     root: Boolean,
-    foundTypes: collection.mutable.Set[String],
-    createdTypes: collection.mutable.Set[SchemaWithClassName],
-    includedComputedProperties: Set[IncludedComputedProperty]
+    registeredDefinitionRefs: collection.mutable.Set[DefinitionKey],
+    createdDefinitions: collection.mutable.Set[SchemaWithClassName],
+    includedComputedProperties: Set[IncludedComputedProperty],
+    path: List[String]
   ) {
-    def childState = copy(root = false)
+    def childState(propertyName: Option[String] = None): ScanState =
+      copy(root = false, path = propertyName.map(path :+ _).getOrElse(path))
+
+    def registerDefinitionRef(definitionKey: DefinitionKey): Boolean =
+      registeredDefinitionRefs.add(definitionKey)
+
+    def addCreatedDefinition(schema: SchemaWithClassName): Unit =
+      createdDefinitions.add(schema)
+
+    def isComputedPropertyIncluded(ownerClassNames: List[String], propertyName: String): Boolean =
+      includedComputedProperties.exists(_.matchesProperty(ownerClassNames, path :+ propertyName))
   }
 
   private object ScanState {
     def fromRootSchemaType(tpe: ru.Type): ScanState =
       ScanState(
         root = true,
-        foundTypes = collection.mutable.Set.empty,
-        createdTypes = collection.mutable.Set.empty,
-        includedComputedProperties = readIncludedComputedPropertiesFromSchemaType(tpe)
+        registeredDefinitionRefs = collection.mutable.Set.empty,
+        createdDefinitions = collection.mutable.Set.empty,
+        includedComputedProperties = readIncludedComputedPropertiesFromSchemaType(tpe),
+        path = Nil
       )
   }
 
@@ -88,7 +126,7 @@ case class SchemaFactory() {
 
   private def readIncludedComputedPropertiesFromSchemaType(tpe: ru.Type): Set[IncludedComputedProperty] =
     findAnnotationsOfType[IncludeComputedProperty](tpe.typeSymbol)
-      .map(annotation => IncludedComputedProperty(annotation.owner.getName, annotation.propertyName))
+      .map(IncludedComputedProperty.fromAnnotation)
       .toSet
 
   private def createSchema(tpe: ru.Type, state: ScanState): Schema = {
@@ -168,40 +206,52 @@ case class SchemaFactory() {
     "org.json4s.JArray" -> AnyListSchema()
   )
 
-  private def addToState(tyep: SchemaWithClassName, state: ScanState) = {
-    state.createdTypes.add(tyep)
-    tyep
+  private def createClassOrTraitSchema(tpe: ru.Type, state: ScanState, readFlattened: Boolean) = {
+    val definitionKey = definitionKeyFor(tpe, state)
+    if (state.registerDefinitionRef(definitionKey)) {
+      createNewClassOrTraitSchema(tpe, state, readFlattened, definitionKey)
+    } else {
+      createClassRefSchema(tpe, definitionKey)
+    }
   }
 
-  private def createClassOrTraitSchema(tpe: ru.Type, state: ScanState, readFlattened: Boolean) = {
-    val className: String = tpe.typeSymbol.fullName
-    if (!state.foundTypes.contains(className)) {
-      state.foundTypes.add(className)
+  private def createNewClassOrTraitSchema(
+    tpe: ru.Type,
+    state: ScanState,
+    readFlattened: Boolean,
+    definitionKey: DefinitionKey
+  ) = {
+    val newSchema = createClassOrTraitSchemaBody(tpe, state, readFlattened, definitionKey)
 
-      val newSchema = if (tpe.typeSymbol.isAbstract) {
-        if (readFlattened) throw new RuntimeException(s"@ReadFlattened annotation on abstract class or trait $tpe")
-        applyMetadataFromClassAndTraits(tpe, AnyOfSchema(findImplementations(tpe, state.childState), className, Nil))
-      } else {
-        createClassSchema(tpe, state, readFlattened)
-      }
-
-      if (state.root) {
-        val classTypeDefinitions = state.createdTypes.toList
-        newSchema.withDefinitions(definitions = classTypeDefinitions.sortBy(_.simpleName))
-      } else {
-        addToState(newSchema, state)
-        createClassRefSchema(tpe)
-      }
-
+    if (state.root) {
+      val definitions = state.createdDefinitions.toList
+      newSchema.withDefinitions(definitions = definitions.sortBy(_.definitionName))
     } else {
-      createClassRefSchema(tpe)
+      state.addCreatedDefinition(newSchema)
+      createClassRefSchema(tpe, definitionKey)
+    }
+  }
+
+  private def createClassOrTraitSchemaBody(
+    tpe: ru.Type,
+    state: ScanState,
+    readFlattened: Boolean,
+    definitionKey: DefinitionKey
+  ): SchemaWithDefinitions = {
+    if (tpe.typeSymbol.isAbstract) {
+      if (readFlattened) throw new RuntimeException(s"@ReadFlattened annotation on abstract class or trait $tpe")
+      applyMetadataFromClassAndTraits(tpe, AnyOfSchema(definitionKey, findImplementations(tpe, state.childState())))
+    } else {
+      createClassSchema(tpe, state, readFlattened, definitionKey)
     }
   }
 
   private def createFlattenedSchema(tpe: ru.Type, state: ScanState) = {
     if (tpe.typeSymbol.isAbstract) throw new RuntimeException(s"@Flatten annotation on abstract class or trait $tpe")
 
-    val classSchema = createClassSchema(tpe, state, false)
+    val definitionKey = definitionKeyFor(tpe, state)
+    state.registerDefinitionRef(definitionKey)
+    val classSchema = createClassSchema(tpe, state, false, definitionKey)
 
     classSchema.properties match {
       case List(property) => FlattenedSchema(classSchema, property)
@@ -210,15 +260,17 @@ case class SchemaFactory() {
     }
   }
 
-  private def createClassRefSchema(tpe: ru.Type) = applyMetadataFromClassAndTraits(tpe, ClassRefSchema(tpe.typeSymbol.fullName, Nil))
+  private def createClassRefSchema(tpe: ru.Type, definitionKey: DefinitionKey) =
+    applyMetadataFromClassAndTraits(tpe, ClassRefSchema(definitionKey))
 
-  private def createClassSchema(tpe: ru.Type, state: ScanState, readFlattened: Boolean): ClassSchema = {
+  private def createClassSchema(
+    tpe: ru.Type,
+    state: ScanState,
+    readFlattened: Boolean,
+    definitionKey: DefinitionKey
+  ): ClassSchema = {
     import MemberFinder.members
     val traits: List[ru.Type] = findTraits(tpe)
-
-    val className: String = tpe.typeSymbol.fullName
-
-    state.foundTypes.add(className)
 
     val constructorParams: List[(ru.Symbol, Boolean)] = tpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.headOption.getOrElse(Nil).map((_, false))
     val syntheticProperties: List[(ru.Symbol, Boolean)] = (members(tpe) ++ traits.flatMap(members))
@@ -226,10 +278,10 @@ case class SchemaFactory() {
       .filter { symbol =>
         val propertyIsComputed = hasAnnotation[ComputedProperty](symbol)
         val propertyIsSynthetic = hasAnnotation[SyntheticProperty](symbol)
+        val computedPropertyOwnerClassNames =
+          if (propertyIsComputed) getBaseClasses(typeByName(symbol.owner.fullName)) else Nil
         val computedPropertyIsIncluded =
-          propertyIsComputed && state.includedComputedProperties.contains(
-            IncludedComputedProperty(className, symbol.name.decodedName.toString.trim)
-          )
+          propertyIsComputed && state.isComputedPropertyIncluded(computedPropertyOwnerClassNames, propertyName(symbol))
 
         (!propertyIsComputed && propertyIsSynthetic) || (propertyIsComputed && computedPropertyIsIncluded)
       }
@@ -241,8 +293,8 @@ case class SchemaFactory() {
 
     val properties: List[Property] = propertySymbols.map { case (paramSymbol, synthetic) =>
       val term = paramSymbol.asTerm
-      val termSchema = createSchema(term.typeSignature, state.childState)
-      val termName: String = term.name.decodedName.toString.trim
+      val termName: String = propertyName(term)
+      val termSchema = createSchema(term.typeSignature, state.childState(Some(termName)))
       val computed = hasAnnotation[ComputedProperty](paramSymbol)
       val ownerTrait = paramSymbol.owner.isAbstract match {
         case true =>
@@ -266,7 +318,7 @@ case class SchemaFactory() {
       }
     }
 
-    val classSchema = applyMetadataFromClassAndTraits(tpe, ClassSchema(className, properties, Nil))
+    val classSchema = applyMetadataFromClassAndTraits(tpe, ClassSchema(definitionKey, properties))
 
     if (readFlattened) {
       val requiredProperties = classSchema.properties.filter(!_.schema.isInstanceOf[OptionalSchema])
@@ -281,6 +333,45 @@ case class SchemaFactory() {
       classSchema
     }
   }
+
+  private def definitionKeyFor(tpe: ru.Type, state: ScanState): DefinitionKey =
+    DefinitionKey(tpe.typeSymbol.fullName, resolveSchemaVariantQualifierFor(tpe, state))
+
+  private def resolveSchemaVariantQualifierFor(tpe: ru.Type, state: ScanState): Option[List[String]] = {
+    val matchingQualifiers = state.includedComputedProperties.toList.flatMap { includedProperty =>
+      val isPathSpecificComputedProperty = includedProperty.propertySuffixPath.length > 1
+
+      if (isPathSpecificComputedProperty) {
+        val schemaPath = includedProperty.propertySuffixPath.dropRight(1)
+        val matchingPrefix = schemaPath.inits.toList
+          .filter(_.nonEmpty)
+          .find(prefix => state.path.endsWith(prefix))
+
+        matchingPrefix.filter { prefix =>
+          // Intermediate schemas are matched by path only, because the computed-property
+          // owner type is not available until the full schema path is reached. This can
+          // create unnecessary variants for unrelated suffix matches; use a more
+          // qualified path from the root when that matters.
+          val isFullSchemaPath = prefix == schemaPath
+          val isIntermediateSchemaPath = !isFullSchemaPath
+          val currentTypeCanExposeIncludedProperty =
+            getBaseClasses(tpe).contains(includedProperty.ownerClassName)
+
+          isIntermediateSchemaPath || currentTypeCanExposeIncludedProperty
+        }
+      } else {
+        None
+      }
+    }
+
+    // Use the most specific matching path qualifier.
+    matchingQualifiers
+      .sortBy(qualifier => (-qualifier.length, qualifier.mkString(".")))
+      .headOption
+  }
+
+  private def propertyName(symbol: ru.Symbol): String =
+    symbol.name.decodedName.toString.trim
 
   private def findTraits(tpe: ru.Type) = {
     tpe.baseClasses

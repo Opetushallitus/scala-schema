@@ -41,20 +41,20 @@ object SchemaToJson {
     case MapSchema(x) => JObject("type" -> JString("object"), ("patternProperties" -> JObject(".*" -> toJsonSchema(x))))
     case OptionalSchema(x) => toJsonSchemaWithoutMetadata(x)
     case t: ClassRefSchema => JObject(
-      ("$ref" -> JString("#/definitions/" + t.simpleName))
+      ("$ref" -> JString("#/definitions/" + t.definitionName))
     )
     case s: ClassSchema if s.readFlattened.isDefined => toJsonSchemaWithoutMetadata(s.asAnyOfSchema)
     case t: ClassSchema => JObject(List(
       ("type" -> JString("object")),
       ("properties" -> toJsonProperties(t.properties)))
-      ++ (if (!t.specialized) { List(("id" -> JString("#" + t.simpleName))) } else Nil )
+      ++ (if (!t.specialized) { List(("id" -> JString("#" + t.definitionName))) } else Nil )
       ++ List(
       ("additionalProperties" -> JBool(false)),
       ("title" -> JString(t.title))
     ) ++ toRequiredProperties(t.properties).toList
       ++ toDefinitionProperty(t.definitions).toList
     )
-    case AnyOfSchema(alternatives, _, _, definitions) => JObject(
+    case AnyOfSchema(_, alternatives, _, definitions) => JObject(
       List("anyOf" -> JArray(alternatives.map(toJsonSchemaWithoutMetadata(_)))) ++ toDefinitionProperty(definitions).toList
     )
     case FlattenedSchema(classSchema, property) => toJsonSchemaWithoutMetadata(property.schema)
@@ -100,7 +100,19 @@ object SchemaToJson {
   } match {
     case Nil => None
     case _ =>
-      Some("definitions", JObject(definitions.map(definition => (definition.simpleName, toJsonSchema(definition)))))
+      failOnDuplicateDefinitionName(definitions)
+      Some("definitions", JObject(definitions.map(definition => (definition.definitionName, toJsonSchema(definition)))))
+  }
+
+  private def failOnDuplicateDefinitionName(definitions: List[SchemaWithClassName]): Unit = {
+    val seenDefinitionNames = scala.collection.mutable.Set.empty[String]
+
+    definitions.foreach { definition =>
+      val definitionName = definition.definitionName
+      if (!seenDefinitionNames.add(definitionName)) {
+        throw new RuntimeException(s"Duplicate JSON schema definition name: $definitionName")
+      }
+    }
   }
 
   private def appendMetadata(obj: JObject, metadata: List[Metadata]): JObject = {

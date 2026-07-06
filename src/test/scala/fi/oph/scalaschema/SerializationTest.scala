@@ -115,6 +115,14 @@ class SerializationTest extends AnyFreeSpec with Matchers {
       )
     }
 
+    "only path-specific computed property is serialized when @IncludeComputedProperty has a dotted suffix path" in {
+      testSerialization(
+        RootWithTwoComputedOwnerPaths(ComputedOwner("included-value"), ComputedOwner("not-included-value")),
+        """{"included":{"value":"included-value","computedValue":"computed-value"},"notIncluded":{"value":"not-included-value"}}""",
+        SerializationContext(SchemaFactory())
+      )
+    }
+
     "computed properties can be skipped by property processor" in {
       def skipComputedProperties(s: ClassSchema, p: Property): List[Property] =
         if (p.computed) Nil else List(p)
