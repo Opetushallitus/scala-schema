@@ -163,6 +163,61 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
           jsonSchemaOf(classOf[WithOverriddenSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withoverriddensyntheticproperties","additionalProperties":false,"title":"With overridden synthetic properties","required":["field"]}""")
         }
       }
+      "@ComputedProperty" - {
+        "is omitted by default from owner schema" in {
+          verifyProperties(classSchemaOf[LeafComputedProperty], "value")
+        }
+        "includes only the middle computed property selected by @IncludeComputedProperty" in {
+          val rootSchema = classSchemaOf[RootWithMiddleComputedProperty]
+          val middleSchema = findSchemaForClass(rootSchema, classOf[MiddleComputedProperty])
+          val leafSchema = findSchemaForClass(rootSchema, classOf[LeafComputedProperty])
+
+          verifyProperties(rootSchema, "middle")
+          verifyProperties(middleSchema, "leaf", "middleComputedValue")
+          verifyProperties(leafSchema, "value")
+
+          verifyJsonPropertyKeys(rootSchema.toJson \ "properties", "middle")
+          verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ middleSchema.simpleName \ "properties", "leaf", "middleComputedValue")
+          verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ leafSchema.simpleName \ "properties", "value")
+          verifyComputedStringProperty(middleSchema, "middleComputedValue")
+        }
+        "includes root and leaf computed properties selected by @IncludeComputedProperty" in {
+          val rootSchema = classSchemaOf[RootWithRootAndLeafComputedProperties]
+          val middleSchema = findSchemaForClass(rootSchema, classOf[MiddleComputedProperty])
+          val leafSchema = findSchemaForClass(rootSchema, classOf[LeafComputedProperty])
+
+          verifyProperties(rootSchema, "middle", "rootComputedValue")
+          verifyProperties(middleSchema, "leaf")
+          verifyProperties(leafSchema, "value", "leafComputedValue")
+
+          verifyJsonPropertyKeys(rootSchema.toJson \ "properties", "middle", "rootComputedValue")
+          verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ middleSchema.simpleName \ "properties", "leaf")
+          verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ leafSchema.simpleName \ "properties", "value", "leafComputedValue")
+          verifyComputedStringProperty(rootSchema, "rootComputedValue")
+          verifyComputedStringProperty(leafSchema, "leafComputedValue")
+        }
+        "root-aware resolve preserves @IncludeComputedProperty additions in referenced schemas" in {
+          val factory = SchemaFactory()
+          val rootAndLeafSchema = factory.createSchema(classOf[RootWithRootAndLeafComputedProperties]).asInstanceOf[ClassSchema]
+          val middleOnlySchema = factory.createSchema(classOf[RootWithMiddleComputedProperty]).asInstanceOf[ClassSchema]
+          val middleRef = ClassRefSchema(classOf[MiddleComputedProperty].getName, Nil)
+          val leafRef = ClassRefSchema(classOf[LeafComputedProperty].getName, Nil)
+
+          val rootAndLeafAwareMiddleSchema = middleRef.resolve(factory, rootAndLeafSchema).asInstanceOf[ClassSchema]
+          val rootAndLeafAwareLeafSchema = leafRef.resolve(factory, rootAndLeafSchema).asInstanceOf[ClassSchema]
+          val middleOnlyAwareMiddleSchema = middleRef.resolve(factory, middleOnlySchema).asInstanceOf[ClassSchema]
+          val middleOnlyAwareLeafSchema = leafRef.resolve(factory, middleOnlySchema).asInstanceOf[ClassSchema]
+          val rootBlindMiddleSchema = middleRef.resolve(factory).asInstanceOf[ClassSchema]
+          val rootBlindLeafSchema = leafRef.resolve(factory).asInstanceOf[ClassSchema]
+
+          verifyProperties(rootAndLeafAwareMiddleSchema, "leaf")
+          verifyProperties(rootAndLeafAwareLeafSchema, "value", "leafComputedValue")
+          verifyProperties(middleOnlyAwareMiddleSchema, "leaf", "middleComputedValue")
+          verifyProperties(middleOnlyAwareLeafSchema, "value")
+          verifyProperties(rootBlindMiddleSchema, "leaf")
+          verifyProperties(rootBlindLeafSchema, "value")
+        }
+      }
       "@EnumValue" - {
         "for strings and optional strings" in {
           jsonSchemaOf(classOf[WithEnumValue]) should equal("""{"type":"object","properties":{"a":{"type":"string","enum":["a"],"minLength":1},"b":{"type":"string","enum":["b"],"minLength":1},"c":{"type":"array","items":{"type":"string","enum":["c"],"minLength":1}}},"id":"#withenumvalue","additionalProperties":false,"title":"With enum value","required":["a","c"]}""")
@@ -248,6 +303,29 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
     JsonMethods.compact(schemaJson)
   }
   def jsonSchemaPropertiesOf(c: Class[_]) = JsonMethods.compact(SchemaFactory.default.createSchema(c).toJson \\ "properties")
+
+  private def classSchemaOf[T : TypeTag]: ClassSchema =
+    SchemaFactory().createSchema[T].asInstanceOf[ClassSchema]
+
+  private def findSchemaForClass(rootSchema: ClassSchema, c: Class[_]): ClassSchema =
+    rootSchema.definitions.find(_.appliesToClass(c)).get.asInstanceOf[ClassSchema]
+
+  private def verifyProperties(schema: ClassSchema, keys: String*): Unit =
+    schema.properties.map(_.key) should equal(keys.toList)
+
+  private def verifyJsonPropertyKeys(propertiesJson: JValue, keys: String*): Unit =
+    propertiesJson match {
+      case JObject(properties) => properties.map(_._1) should equal(keys.toList)
+      case other => fail(s"Expected JSON object properties, got $other")
+    }
+
+  private def verifyComputedStringProperty(schema: ClassSchema, key: String): Unit = {
+    val computedProperty = schema.properties.find(_.key == key).get
+
+    computedProperty.synthetic should equal(true)
+    computedProperty.computed should equal(true)
+    computedProperty.schema should equal(OptionalSchema(StringSchema()))
+  }
 
   private lazy val jsonSchemaFactory = JsonSchemaFactory.newBuilder.setReportProvider(new ListReportProvider(ERROR, FATAL)).freeze()
   private lazy val validator: JsonValidator = JsonSchemaFactory.byDefault.getValidator

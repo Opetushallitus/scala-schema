@@ -82,6 +82,43 @@ class SerializationTest extends AnyFreeSpec with Matchers {
     testSerialization(WithOverriddenSyntheticProperties(false), """{"field":false}""")
   }
 
+  "computed properties" - {
+    "root and leaf computed properties are serialized when root schema includes them with @IncludeComputedProperty" in {
+      testSerialization(
+        rootWithRootAndLeafComputedProperties("leaf-value"),
+        """{"middle":{"leaf":{"value":"leaf-value","leafComputedValue":"leaf-computed-value"}},"rootComputedValue":"root-computed-value"}""",
+        SerializationContext(SchemaFactory())
+      )
+    }
+
+    "only middle computed property is serialized when it is the only root schema @IncludeComputedProperty" in {
+      testSerialization(
+        rootWithMiddleComputedProperty("leaf-value"),
+        """{"middle":{"leaf":{"value":"leaf-value"},"middleComputedValue":"middle-computed-value"}}""",
+        SerializationContext(SchemaFactory())
+      )
+    }
+
+    "computed properties are not serialized when no @IncludeComputedProperty is resolved from the root schema" in {
+      testSerialization(
+        LeafComputedProperty("leaf-value"),
+        """{"value":"leaf-value"}""",
+        SerializationContext(SchemaFactory())
+      )
+    }
+
+    "computed properties can be skipped by property processor" in {
+      def skipComputedProperties(s: ClassSchema, p: Property): List[Property] =
+        if (p.computed) Nil else List(p)
+
+      testSerialization(
+        rootWithRootAndLeafComputedProperties("leaf-value"),
+        """{"middle":{"leaf":{"value":"leaf-value"}}}""",
+        SerializationContext(SchemaFactory(), propertyProcessor = skipComputedProperties)
+      )
+    }
+  }
+
   "empty optional" in {
     val json = Serializer.serialize(WithOptionalDiscriminator("name", None), defaultContext)
     json should equal(JObject("name" -> JString("name")))
@@ -142,6 +179,12 @@ class SerializationTest extends AnyFreeSpec with Matchers {
     val jValue = Serializer.serialize(x, context)
     org.json4s.jackson.JsonMethods.compact(jValue) should equal(expected)
   }
+
+  private def rootWithRootAndLeafComputedProperties(value: String) =
+    RootWithRootAndLeafComputedProperties(MiddleComputedProperty(LeafComputedProperty(value)))
+
+  private def rootWithMiddleComputedProperty(value: String) =
+    RootWithMiddleComputedProperty(MiddleComputedProperty(LeafComputedProperty(value)))
 
   private def defaultContext[T] =
     SerializationContext(SchemaFactory.default)

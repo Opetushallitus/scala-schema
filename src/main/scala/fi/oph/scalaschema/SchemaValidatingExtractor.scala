@@ -18,7 +18,7 @@ object SchemaValidatingExtractor {
         case _ => json
       }
     }
-    extract(dta, rootSchema, Nil)(context, rootSchema).map(_.asInstanceOf[T])
+    extract(dta, rootSchema, Nil).map(_.asInstanceOf[T])
   }
 
   def extract[T](json: String)(implicit context: ExtractionContext, tag: ru.TypeTag[T]): Either[List[ValidationError], T] = {
@@ -38,17 +38,21 @@ object SchemaValidatingExtractor {
   def extract(json: JValue, klass: Class[_])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     val rootSchema = context.schemaFactory.createSchema(klass.getName)
     if (context.stripClassReferences) {
-      extract(removeJsonField(json, "$class"), rootSchema, Nil)(context, rootSchema).map(_.asInstanceOf[AnyRef])
+      extract(removeJsonField(json, "$class"), rootSchema, Nil).map(_.asInstanceOf[AnyRef])
     } else {
-      extract(json, rootSchema, Nil)(context, rootSchema).map(_.asInstanceOf[AnyRef])
+      extract(json, rootSchema, Nil).map(_.asInstanceOf[AnyRef])
     }
   }
 
-  def extract(json: JValue, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext, rootSchema: Schema): Either[List[ValidationError], Any] = {
+  def extract(json: JValue, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
     extract(JsonCursor(json), schema, metadata)
   }
 
   def extract(cursor: JsonCursor, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
+    doExtract(cursor, schema, metadata)(context.withRootSchema(schema))
+  }
+
+  private def doExtract(cursor: JsonCursor, schema: Schema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], Any] = {
     schema match {
       case os: OptionalSchema => OptionalExtractor.extractOptional(cursor, os, metadata)
       case ss: StringSchema => StringExtractor.extract(cursor, ss, metadata)
@@ -71,7 +75,7 @@ object SchemaValidatingExtractor {
         case cs: SchemaWithClassName =>
           (context.customSerializerFor(cs), cs) match {
             case (Some(serializer), cs: SchemaWithClassName) => serializer.extract(cursor, cs, metadata)
-            case (_, cs: ClassRefSchema) => extract(cursor, cs.resolve(context.schemaFactory), metadata)
+            case (_, cs: ClassRefSchema) => doExtract(cursor, context.createSchema(cs), metadata)
             case (_, cs: ClassSchema) => ObjectExtractor.extractObject(cursor, cs, metadata)
             case (_, as: AnyOfSchema) => AnyOfExtractor.extractAnyOf(cursor, as, metadata)
             case _ => throw new RuntimeException(s"Unexpected schema type ${schema}")
@@ -88,11 +92,6 @@ object SchemaValidatingExtractor {
       doExtract
   }
 }
-
-
-
-
-
 
 
 

@@ -18,10 +18,21 @@ case class ExtractionContext(schemaFactory: SchemaFactory,
                              criteriaCache: collection.mutable.Map[String, DiscriminatorCriterion] = collection.mutable.Map.empty,
                              ignoreNonValidatingListItems: Boolean = false,
                              stripClassReferences: Boolean = true,
-                             omitNullFromInput: Boolean = false) {
+                             omitNullFromInput: Boolean = false,
+                             private[scalaschema] val rootSchema: Option[Schema] = None) {
   def hasSerializerFor(schema: SchemaWithClassName) = customSerializerFor(schema).isDefined
   def customSerializerFor(schema: SchemaWithClassName) = customDeserializers.find(_.isApplicable(schema))
   def ifValidating(errors: => List[ValidationError]) = if (validate) { errors } else { Nil }
+  private[scalaschema] def withRootSchema(schema: Schema): ExtractionContext =
+    rootSchema match {
+      case Some(_) => this
+      case None => copy(rootSchema = Some(schema))
+    }
+  private[scalaschema] def createSchema(classRef: ClassRefSchema): SchemaWithClassName =
+    rootSchema match {
+      case Some(root) => schemaFactory.createSchema(classRef, root)
+      case None => schemaFactory.createSchema(classRef.fullClassName)
+    }
 }
 
 case class JsonCursor(json: JValue, parent: Option[JsonCursor] = None, path: String = "") {

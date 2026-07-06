@@ -88,6 +88,7 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
 case class ClassRefSchema(fullClassName: String, override val metadata: List[Metadata]) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
   def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
+  override def resolve(factory: SchemaFactory, rootSchema: Schema): SchemaWithClassName = factory.createSchema(this, rootSchema)
 }
 case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
   if (alternatives.isEmpty) throw new RuntimeException("AnyOfSchema needs at least one alternative")
@@ -131,6 +132,25 @@ sealed trait SchemaWithDefinitions extends SchemaWithClassName {
   def definitions: List[SchemaWithClassName]
   def withDefinitions(definitions: List[SchemaWithClassName]): SchemaWithDefinitions
   def moveDefinitionsToTopLevel: SchemaWithDefinitions
+
+  // A ClassRefSchema can be resolved from the current root schema before falling back to
+  // SchemaFactory. When a class ref appears inside a root schema, the referenced class
+  // schema may already have been created while scanning that root. The root schema's
+  // definitions contain schemas found through the root's fields, their fields, and so on.
+  //
+  // This matters for root-specific schema features such as @IncludeComputedProperty.
+  // During the root scan, child schema creation receives the same ScanState, so the child
+  // schemas in definitions preserve the root-specific included computed property
+  // configuration. Resolving the class ref directly through SchemaFactory would use the
+  // referenced class as its own root schema and lose that configuration.
+  private[scalaschema] def findSchemaForClassRef(classRef: ClassRefSchema): Option[SchemaWithClassName] = {
+    if (fullClassName == classRef.fullClassName) {
+      Some(this)
+    } else {
+      definitions.find(_.fullClassName == classRef.fullClassName)
+    }
+  }
+
   protected [scalaschema] def definitionsCollectedFromDefinitions: List[SchemaWithClassName] = this.definitions.flatMap { definitionSchema =>
     val (defschema2, defs) = definitionSchema.collectDefinitions
     defschema2.asInstanceOf[SchemaWithClassName] :: defs
@@ -157,9 +177,10 @@ sealed trait SchemaWithClassName extends Schema {
   def appliesToClass(k: Class[_]) = k.getName == fullClassName
 
   def resolve(factory: SchemaFactory): SchemaWithClassName
+  def resolve(factory: SchemaFactory, rootSchema: Schema): SchemaWithClassName = resolve(factory)
 }
 
-case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false) extends ObjectWithMetadata[Property] {
+case class Property(key: String, schema: Schema, metadata: List[Metadata] = Nil, synthetic: Boolean = false, computed: Boolean = false) extends ObjectWithMetadata[Property] {
   def replaceMetadata(metadata: List[Metadata]) =
     copy(
       metadata = metadata,

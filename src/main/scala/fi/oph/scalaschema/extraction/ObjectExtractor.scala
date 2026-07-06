@@ -9,7 +9,7 @@ import org.json4s._
 object ObjectExtractor {
   def extractFlattenedObject(cursor: JsonCursor, s: FlattenedSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     SchemaValidatingExtractor.extract(cursor, s.property.schema, metadata).map { extractedValue =>
-      val constructorParams = s.classSchema.properties.filterNot(_.synthetic).map { p => if (p == s.property) extractedValue else None }
+      val constructorParams = s.classSchema.properties.filter(canExtractProperty).map { p => if (p == s.property) extractedValue else None }
       instantiateCaseClass(cursor.path, s.fullClassName, constructorParams)
     }
   }
@@ -19,11 +19,14 @@ object ObjectExtractor {
     case None => doExtractObject(cursor, cs, metadata)
   }
 
+  private def canExtractProperty(property: Property): Boolean =
+    !property.synthetic && !property.computed
+
   private def doExtractObject(cursor: JsonCursor, cs: ClassSchema, metadata: List[Metadata])(implicit context: ExtractionContext): Either[List[ValidationError], AnyRef] = {
     cursor.json match {
       case o@JObject(values) =>
         val propertyResults: List[Either[List[ValidationError], Any]] = cs.properties
-          .filterNot(_.synthetic)
+          .filter(canExtractProperty)
           .map { property =>
             val propertyValueCursor = cursor.subCursor(o \ property.key, property.key)
             val valuePresent = propertyValueCursor.json match {

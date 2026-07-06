@@ -77,6 +77,30 @@ case class SyntheticCat() {
 }
 ```
 
+Use `@ComputedProperty` for read-only JSON properties exposed from methods whose values are derived dynamically at
+serialization time, instead of being stored as constructor data or accepted from input JSON.
+
+`@ComputedProperty` alone does not add the method to generated schemas or serialization output. This default is
+intentional because computed methods may perform slow synchronous work, including external service requests. Root-level
+opt-in lets each schema choose the tradeoff: include the derived field where needed, or reuse the same lower-level schema
+object without paying that cost elsewhere.
+
+```scala
+case class Cat(name: String) {
+  @ComputedProperty
+  def displayName = s"Cat: $name"
+}
+
+@IncludeComputedProperty(classOf[Cat], "displayName")
+case class CatResponse(cat: Cat)
+```
+
+Computed properties included with `@IncludeComputedProperty` are serialized and shown in generated JSON Schema, but
+remain optional because they are output-only fields. During extraction and deserialization, input JSON values for
+included computed properties are ignored and are not used to construct the extracted Scala value. If a computed property
+has not been included in the schema, its JSON key is unknown to the extractor and is handled like any other unexpected
+property. The owner class passed to `@IncludeComputedProperty` must not be nested or local.
+
 More examples and a pretty much full feature list can be found in this [test file](src/test/scala/fi/oph/scalaschema/JsonSchemaTest.scala).
 
 ### Validation and extraction

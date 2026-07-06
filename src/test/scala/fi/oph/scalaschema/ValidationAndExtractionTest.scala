@@ -282,6 +282,116 @@ class ValidationAndExtractionTest extends AnyFreeSpec with Matchers {
         verifyValidation[WithSyntheticProperties](JObject(List("field2" -> JArray(List(JBool(true))), "field1" -> JBool(true))), Right(WithSyntheticProperties()))
       }
     }
+    "Computed properties" - {
+      "Reject input values for root and leaf computed properties when only middle is included in schema" in {
+        verifyValidation[RootWithMiddleComputedProperty](
+          JObject(
+            "middle" -> JObject(
+              "leaf" -> JObject(
+                "value" -> JString("leaf-value-from-input"),
+                "leafComputedValue" -> JObject("leaf-computed-value-from-input" -> JString("leaf-computed-value-from-input"))
+              ),
+              "middleComputedValue" -> JArray(List(JString("middle-computed-value-from-input")))
+            ),
+            "rootComputedValue" -> JString("root-computed-value-from-input")
+          ),
+          Left(List(
+            ValidationError("middle.leaf.leafComputedValue", JObject("leaf-computed-value-from-input" -> JString("leaf-computed-value-from-input")), UnexpectedProperty()),
+            ValidationError("rootComputedValue", JString("root-computed-value-from-input"), UnexpectedProperty())
+          )),
+          ExtractionContext(SchemaFactory())
+        )
+      }
+
+      "Reject input values for middle computed property when only root and leaf are included in schema" in {
+        verifyValidation[RootWithRootAndLeafComputedProperties](
+          JObject(
+            "middle" -> JObject(
+              "leaf" -> JObject(
+                "value" -> JString("leaf-value-from-input"),
+                "leafComputedValue" -> JObject("leaf-computed-value-from-input" -> JString("leaf-computed-value-from-input"))
+              ),
+              "middleComputedValue" -> JArray(List(JString("middle-computed-value-from-input")))
+            ),
+            "rootComputedValue" -> JString("root-computed-value-from-input")
+          ),
+          Left(List(
+            ValidationError("middle.middleComputedValue", JArray(List(JString("middle-computed-value-from-input"))), UnexpectedProperty())
+          )),
+          ExtractionContext(SchemaFactory())
+        )
+      }
+
+      "Can be omitted from input when included in schema" in {
+        verifyValidation[RootWithMiddleComputedProperty](
+          JObject(
+            "middle" -> JObject(
+              "leaf" -> JObject("value" -> JString("leaf-value-from-input"))
+            )
+          ),
+          Right(RootWithMiddleComputedProperty(MiddleComputedProperty(LeafComputedProperty("leaf-value-from-input")))),
+          ExtractionContext(SchemaFactory())
+        )
+      }
+
+      "Are ignored in extraction when provided even when included in schema" in {
+        verifyValidation[RootWithMiddleComputedProperty](
+          JObject(
+            "middle" -> JObject(
+              "leaf" -> JObject("value" -> JString("leaf-value-from-input")),
+              "middleComputedValue" -> JObject("middle-computed-value-from-input" -> JString("middle-computed-value-from-input"))
+            )
+          ),
+          Right(RootWithMiddleComputedProperty(MiddleComputedProperty(LeafComputedProperty("leaf-value-from-input")))),
+          ExtractionContext(SchemaFactory())
+        )
+      }
+
+      "Use computed values instead of middle input values when provided even when included in schema" in {
+        implicit val context = ExtractionContext(SchemaFactory())
+        val extraction = SchemaValidatingExtractor.extract[RootWithMiddleComputedProperty](
+          JObject(
+            "middle" -> JObject(
+              "leaf" -> JObject("value" -> JString("leaf-value-from-input")),
+              "middleComputedValue" -> JString("middle-computed-value-from-input")
+            )
+          )
+        )
+
+        extraction match {
+          case Right(extracted) =>
+            extracted should equal(RootWithMiddleComputedProperty(MiddleComputedProperty(LeafComputedProperty("leaf-value-from-input"))))
+            extracted.middle.middleComputedValue should equal("middle-computed-value")
+          case Left(errors) => fail(s"Expected successful extraction, got $errors")
+        }
+      }
+
+      "Use computed values instead of root and leaf input values when provided even when included in schema" in {
+        implicit val context = ExtractionContext(SchemaFactory())
+        val extraction = SchemaValidatingExtractor.extract[RootWithRootAndLeafComputedProperties](
+          JObject(
+            "middle" -> JObject(
+              "leaf" -> JObject(
+                "value" -> JString("leaf-value-from-input"),
+                "leafComputedValue" -> JObject("leaf-computed-value-from-input" -> JString("leaf-computed-value-from-input"))
+              )
+            ),
+            "rootComputedValue" -> JString("root-computed-value-from-input")
+          )
+        )
+
+        extraction match {
+          case Right(extracted) =>
+            extracted should equal(RootWithRootAndLeafComputedProperties(
+              MiddleComputedProperty(LeafComputedProperty("leaf-value-from-input"))
+            ))
+            extracted.rootComputedValue should equal("root-computed-value")
+            extracted.middle.leaf.leafComputedValue should equal("leaf-computed-value")
+          case Left(errors) => fail(s"Expected successful extraction, got $errors")
+        }
+      }
+
+    }
     "Traits" - {
       "Decides on appropriate trait implementation automatically if determinable from required fields" in {
         verifyExtractionRoundTrip[EasilyDecidableTrait](NonEmpty("hello"))
