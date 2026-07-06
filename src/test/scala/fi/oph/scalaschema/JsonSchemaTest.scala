@@ -4,7 +4,7 @@ import com.github.fge.jsonschema.core.report.ListReportProvider
 import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import fi.oph.scalaschema.TestHelpers.schemaOf
-import fi.oph.scalaschema.annotation.{EnumValue, SkipSerialization}
+import fi.oph.scalaschema.annotation.{Description, EnumValue, SkipSerialization}
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
@@ -259,6 +259,9 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
         "Simple case" in {
           jsonSchemaOf(SchemaFactory.default.createSchema[CustomAnnotated]) should equal("""{"type":"object","properties":{},"id":"#customannotated","additionalProperties":false,"title":"Custom annotated","description":"These numbers: 1,2,3"}""")
         }
+        "Unsupported annotations are ignored" in {
+          jsonSchemaOf(SchemaFactory.default.createSchema[AnnotatedWithUnsupportedAnnotation]) should equal("""{"type":"object","properties":{},"id":"#annotatedwithunsupportedannotation","additionalProperties":false,"title":"Annotated with unsupported annotation","description":"Supported annotation"}""")
+        }
         "Transforming property schemas to other schemas" in {
           jsonSchemaOf(SchemaFactory.default.createSchema[MadlyAnnotated]) should equal("""{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#madlyannotated","additionalProperties":false,"title":"Madly annotated","required":["field"]}""")
         }
@@ -337,6 +340,10 @@ case class CustomAnnotation(numbers: List[Int]) extends Metadata {
 
 @CustomAnnotation(List(1, 2, 3))
 case class CustomAnnotated()
+
+@UnsupportedTestAnnotation
+@Description("Supported annotation")
+case class AnnotatedWithUnsupportedAnnotation()
 
 case class MadAnnotation() extends Metadata {
   override def applyMetadata(x: ObjectWithMetadata[_], schemaFactory: SchemaFactory): ObjectWithMetadata[_] = x match {
