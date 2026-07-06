@@ -20,4 +20,4 @@ jobs:
           cache: maven
 
       - name: Run backend tests
-        run: mvn install -B
+        run: ./mvnw install -B
