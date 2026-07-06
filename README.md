@@ -1,6 +1,6 @@
 ## scala-schema
 
-[![Build Status](https://travis-ci.org/Opetushallitus/scala-schema.svg?branch=scala-2.12)](https://travis-ci.org/Opetushallitus/scala-schema)
+[![Tests](https://github.com/Opetushallitus/scala-schema/actions/workflows/tests.yml/badge.svg?branch=scala-2.13)](https://github.com/Opetushallitus/scala-schema/actions/workflows/tests.yml)
 
 Generate a [JSON schema](http://json-schema.org/) from Scala classes 
 
@@ -172,7 +172,7 @@ object SerializationExample extends App {
 ```
 
 
-More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/ValidationAndExtractionTest.scala)
+More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.13/src/test/scala/fi/oph/scalaschema/ValidationAndExtractionTest.scala)
 
 ### Serialization
 
@@ -234,7 +234,7 @@ object SerializationExample extends App {
 }
 ```
 
-In the above example, all fields with the name "age" are hidden. More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.12/src/test/scala/fi/oph/scalaschema/SerializationSpec.scala).
+In the above example, all fields with the name "age" are hidden. More examples in this [test](https://github.com/Opetushallitus/scala-schema/blob/scala-2.13/src/test/scala/fi/oph/scalaschema/SerializationTest.scala).
 
 ### Schemas and Factories
 
@@ -272,7 +272,7 @@ If there are multiple case classes with no annotations, the deserialising throws
 
 ### How to use as dependency
 
-The `scala-schema` library is currently maintained in two branches for scala versions 2.11 and 2.12.
+The `scala-schema` library is currently maintained for Scala 2.13 on the `scala-2.13` branch.
 
 It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to 
 depend on it anyway. Just follow the instructions below.
@@ -299,7 +299,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.23.0_2.12</version>
+    <version>2.42.0_2.13</version>
   </dependency>
 </dependencies>
 ```
@@ -312,16 +312,16 @@ Add Jitpack.io resolver:
 
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
-    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.23.0_2.12"
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.42.0_2.13"
 
 ### Developing scala-schema
 
-Project is built and tested with Maven. So `mvn install` will do the job.
+Project is built and tested with Maven Wrapper. So `./mvnw install` will do the job.
 
-There are separate branches for scala versions. The active development branch is `scala-2.12`.
+The active development branch is `scala-2.13`.
 
-A new "release" is created simply by tagging. For instance, to release the current head as version 2.25.0 (an already 
-released version)for scala 2.12, you would do `git tag 2.25.0_2.12 && git push --tags`. 
+A new "release" is created simply by tagging. For instance, to release the current head as version 2.42.0
+for Scala 2.13, you would do `git tag 2.42.0_2.13 && git push origin 2.42.0_2.13`.
 
 ### TODO
 
