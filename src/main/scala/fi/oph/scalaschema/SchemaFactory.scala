@@ -379,16 +379,16 @@ private object TraitImplementationFinder {
 object Annotations {
   private val annotationCache: collection.mutable.Map[ru.Symbol, List[(ru.Symbol, StaticAnnotation)]] = collection.mutable.Map.empty
 
-  def findAnnotations(symbol: ru.Symbol, annotationsSupported: ru.Symbol => Boolean): List[StaticAnnotation] = this.synchronized {
+  def findAnnotations(symbol: ru.Symbol, includeAnnotation: ru.Symbol => Boolean): List[StaticAnnotation] = this.synchronized {
     val annotations = annotationCache.getOrElseUpdate(symbol, {
-      symbol.annotations.map { annotation =>
+      symbol.annotations.flatMap { annotation =>
         val annotationSymbol: ru.Symbol = annotation.tree.tpe.typeSymbol
         val annotationParams: List[ru.Tree] = annotation.tree.children.tail
-        val staticAnnotation = Annotations.parseAnnotation(annotationSymbol, annotationParams)
-        (annotationSymbol, staticAnnotation)
+        Annotations.parseAnnotation(annotationSymbol, annotationParams)
+          .map(staticAnnotation => (annotationSymbol, staticAnnotation))
       }
     })
-    annotations.filter(x => annotationsSupported(x._1)).map(_._2)
+    annotations.filter(x => includeAnnotation(x._1)).map(_._2)
   }
 
   import scala.tools.reflect.ToolBox
@@ -396,14 +396,27 @@ object Annotations {
 
   private def unescapeJava(str: Any) = StringEscapeUtils.unescapeJava(str.toString.replaceAll("\"$|^\"", ""))
 
-  private def parseAnnotation(annotationSymbol: ru.Symbol, params: List[ru.Tree]): StaticAnnotation = {
+  private def parseAnnotation(annotationSymbol: ru.Symbol, params: List[ru.Tree]): Option[StaticAnnotation] = {
+    if (!annotationSymbol.isClass || !annotationSymbol.asClass.baseClasses.contains(ru.typeOf[StaticAnnotation].typeSymbol)) {
+      None
+    } else {
+      Some(doParseAnnotation(annotationSymbol, params))
+    }
+  }
+
+  private def doParseAnnotation(annotationSymbol: ru.Symbol, params: List[ru.Tree]): StaticAnnotation = {
     val StringClass = classOf[String]
     val DoubleClass = classOf[Double]
     val IntegerClass = classOf[Int]
     val BooleanClass = classOf[Boolean]
 
     val annotationClass = Class.forName(annotationSymbol.asClass.fullName)
-    val constructor: Constructor[_] = annotationClass.getConstructors()(0)
+    val constructor: Constructor[_] = annotationClass.getConstructors.headOption.getOrElse {
+      throw new RuntimeException(
+        s"Cannot parse annotation ${annotationSymbol.fullName}: scala-schema can only instantiate supported Scala StaticAnnotation classes with public constructors. " +
+          "If this is an unexpected Java/JDK annotation, filter it out before parsing annotations."
+      )
+    }
 
     def parseAsDouble(v: Any) = Double.box(v.toString.toDouble)
     def parseAsInteger(v: Any) = Integer.valueOf(v.toString.toDouble.toInt)
