@@ -82,7 +82,9 @@ object SchemaToJson {
 
   private def toJsonProperties(properties: List[Property]): JValue = {
     JObject(properties.map { property =>
-        (property.key, appendMetadata(appendMetadata(toJsonSchemaWithoutMetadata(property.schema), property.metadata), property.schema.metadata))
+        val json = appendMetadata(appendMetadata(toJsonSchemaWithoutMetadata(property.schema), property.metadata), property.schema.metadata)
+        val withSynthetic = if (property.synthetic || property.computed) json.merge(JObject("synthetic" -> JBool(true))) else json
+        (property.key, withSynthetic)
     })
   }
 

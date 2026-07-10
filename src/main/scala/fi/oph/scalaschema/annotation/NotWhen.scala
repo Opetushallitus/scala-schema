@@ -19,11 +19,14 @@ import org.json4s.{JArray, JNothing, JNull, JValue, JsonAST}
  * @param disallowedValues Disallowed values. Can be a [[scala.AnyValCompanion]], [[scala.None]] or a [[scala.collection.immutable.List]] of [[scala.AnyValCompanion]].
  */
 case class NotWhen(path: String, disallowedValues: Any) extends Metadata {
-  override def appendMetadataToJsonSchema(obj: JsonAST.JObject): JsonAST.JObject = appendToDescription(obj, s"(Not when $path = ${disallowedValues match {
-    case listValues: List[Any] => listValues.mkString(",")
-    case value: Any => value.toString()
-    case None => None
-  }})")
+  override def appendMetadataToJsonSchema(obj: JsonAST.JObject): JsonAST.JObject = {
+    val condition = s"Not when $path = ${disallowedValues match {
+      case listValues: List[Any] => listValues.mkString(",")
+      case value: Any => value.toString()
+      case None => None
+    }}"
+    appendToDescription(appendToStringArray(obj, "conditions", condition), s"($condition)")
+  }
   def serializableForm = SerializableNotWhen(path, disallowedValues match {
     case a: Any => ValueConversion.anyToJValueWithLists(a)
   })
