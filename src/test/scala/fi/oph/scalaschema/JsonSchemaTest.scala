@@ -5,7 +5,7 @@ import com.github.fge.jsonschema.core.report.LogLevel.{ERROR, FATAL}
 import com.github.fge.jsonschema.main.{JsonSchemaFactory, JsonValidator}
 import fi.oph.scalaschema.TestHelpers.schemaOf
 import fi.oph.scalaschema.annotation.{Description, EnumValue, SkipSerialization}
-import org.json4s.JsonAST.JObject
+import org.json4s.JsonAST.{JObject, JString}
 import org.json4s.jackson.JsonMethods.asJsonNode
 import org.json4s.jackson._
 import org.json4s.{JArray, JValue}
@@ -17,7 +17,7 @@ import scala.reflect.runtime.universe.TypeTag
 class JsonSchemaTest extends AnyFreeSpec with Matchers {
   "Simple example" - {
     val schema = SchemaFactory.default.createSchema(classOf[TestClass])
-    val expectedClassSchema = ClassSchema("fi.oph.scalaschema.TestClass", List(
+    val expectedClassSchema = ClassSchema(DefinitionKey("fi.oph.scalaschema.TestClass"), List(
       Property("name", StringSchema()),
       Property("stuff", ListSchema(NumberSchema(classOf[Int]))))
     )
@@ -176,6 +176,8 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
           verifyProperties(middleSchema, "leaf", "middleComputedValue")
           verifyProperties(leafSchema, "value")
 
+          verifyClassRefSchema(rootSchema, "middle", classOf[MiddleComputedProperty])
+
           verifyJsonPropertyKeys(rootSchema.toJson \ "properties", "middle")
           verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ middleSchema.simpleName \ "properties", "leaf", "middleComputedValue")
           verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ leafSchema.simpleName \ "properties", "value")
@@ -200,22 +202,99 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
           val factory = SchemaFactory()
           val rootAndLeafSchema = factory.createSchema(classOf[RootWithRootAndLeafComputedProperties]).asInstanceOf[ClassSchema]
           val middleOnlySchema = factory.createSchema(classOf[RootWithMiddleComputedProperty]).asInstanceOf[ClassSchema]
-          val middleRef = ClassRefSchema(classOf[MiddleComputedProperty].getName, Nil)
-          val leafRef = ClassRefSchema(classOf[LeafComputedProperty].getName, Nil)
+          val middleRef = ClassRefSchema(DefinitionKey(classOf[MiddleComputedProperty].getName))
+          val leafRef = ClassRefSchema(DefinitionKey(classOf[LeafComputedProperty].getName))
 
           val rootAndLeafAwareMiddleSchema = middleRef.resolve(factory, rootAndLeafSchema).asInstanceOf[ClassSchema]
           val rootAndLeafAwareLeafSchema = leafRef.resolve(factory, rootAndLeafSchema).asInstanceOf[ClassSchema]
           val middleOnlyAwareMiddleSchema = middleRef.resolve(factory, middleOnlySchema).asInstanceOf[ClassSchema]
           val middleOnlyAwareLeafSchema = leafRef.resolve(factory, middleOnlySchema).asInstanceOf[ClassSchema]
-          val rootBlindMiddleSchema = middleRef.resolve(factory).asInstanceOf[ClassSchema]
-          val rootBlindLeafSchema = leafRef.resolve(factory).asInstanceOf[ClassSchema]
+          val standaloneMiddleSchema = factory.createSchema(classOf[MiddleComputedProperty]).asInstanceOf[ClassSchema]
+          val standaloneLeafSchema = factory.createSchema(classOf[LeafComputedProperty]).asInstanceOf[ClassSchema]
 
           verifyProperties(rootAndLeafAwareMiddleSchema, "leaf")
           verifyProperties(rootAndLeafAwareLeafSchema, "value", "leafComputedValue")
           verifyProperties(middleOnlyAwareMiddleSchema, "leaf", "middleComputedValue")
           verifyProperties(middleOnlyAwareLeafSchema, "value")
-          verifyProperties(rootBlindMiddleSchema, "leaf")
-          verifyProperties(rootBlindLeafSchema, "value")
+          verifyProperties(standaloneMiddleSchema, "leaf")
+          verifyProperties(standaloneLeafSchema, "value")
+        }
+        "includes path-specific computed property only in the matching path" in {
+          val rootSchema = classSchemaOf[RootWithTwoComputedOwnerPaths]
+          val includedSchema = findSchemaForDefinition(rootSchema, "included:computedowner")
+          val computedOwnerSchema = findSchemaForDefinition(rootSchema, "computedowner")
+
+          verifyProperties(rootSchema, "included", "notIncluded")
+          verifyProperties(includedSchema, "value", "computedValue")
+
+          verifyProperties(computedOwnerSchema, "value")
+          verifyClassRefSchema(rootSchema, "included", classOf[ComputedOwner], "included:computedowner")
+          verifyClassRefSchema(rootSchema, "notIncluded", classOf[ComputedOwner])
+
+          verifyJsonRef(rootSchema.toJson \ "properties" \ "included", "included:computedowner")
+          verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ includedSchema.definitionName \ "properties", "value", "computedValue")
+          verifyJsonPropertyKeys(rootSchema.toJson \ "definitions" \ computedOwnerSchema.definitionName \ "properties", "value")
+          verifyComputedStringProperty(includedSchema, "computedValue")
+        }
+        "creates path-specific refs for intermediate and owner classes in the matching path" in {
+          val rootSchema = classSchemaOf[RootWithPathSpecificComputedLeaf]
+          val includedMiddleSchema = findSchemaForDefinition(rootSchema, "included:middlecomputedproperty")
+          val includedLeafSchema = findSchemaForDefinition(rootSchema, "included:leaf:leafcomputedproperty")
+          val middleSchema = findSchemaForDefinition(rootSchema, "middlecomputedproperty")
+          val leafSchema = findSchemaForDefinition(rootSchema, "leafcomputedproperty")
+
+          verifyProperties(includedLeafSchema, "value", "leafComputedValue")
+
+          verifyClassRefSchema(rootSchema, "included", classOf[MiddleComputedProperty], "included:middlecomputedproperty")
+          verifyClassRefSchema(includedMiddleSchema, "leaf", classOf[LeafComputedProperty], "included:leaf:leafcomputedproperty")
+          verifyClassRefSchema(rootSchema, "notIncluded", classOf[MiddleComputedProperty])
+          verifyProperties(middleSchema, "leaf")
+          verifyClassRefSchema(middleSchema, "leaf", classOf[LeafComputedProperty])
+          verifyProperties(leafSchema, "value")
+        }
+        "creates path-specific refs for reused intermediates independent of field order" in {
+          val rootWithAIncludedSchema = classSchemaOf[RootWithComputedLeafOnPathA]
+          val aMiddleSchema = findSchemaForDefinition(rootWithAIncludedSchema, "a:middlecomputedproperty")
+          val aLeafSchema = findSchemaForDefinition(rootWithAIncludedSchema, "a:leaf:leafcomputedproperty")
+          val middleSchema = findSchemaForDefinition(rootWithAIncludedSchema, "middlecomputedproperty")
+          val leafSchema = findSchemaForDefinition(rootWithAIncludedSchema, "leafcomputedproperty")
+
+          verifyClassRefSchema(rootWithAIncludedSchema, "a", classOf[MiddleComputedProperty], "a:middlecomputedproperty")
+          verifyClassRefSchema(aMiddleSchema, "leaf", classOf[LeafComputedProperty], "a:leaf:leafcomputedproperty")
+          verifyProperties(aLeafSchema, "value", "leafComputedValue")
+          verifyClassRefSchema(rootWithAIncludedSchema, "b", classOf[MiddleComputedProperty])
+          verifyClassRefSchema(middleSchema, "leaf", classOf[LeafComputedProperty])
+          verifyProperties(leafSchema, "value")
+
+          val rootWithBIncludedSchema = classSchemaOf[RootWithComputedLeafOnPathB]
+          val bMiddleSchema = findSchemaForDefinition(rootWithBIncludedSchema, "b:middlecomputedproperty")
+          val bLeafSchema = findSchemaForDefinition(rootWithBIncludedSchema, "b:leaf:leafcomputedproperty")
+          val middleSchemaForB = findSchemaForDefinition(rootWithBIncludedSchema, "middlecomputedproperty")
+          val leafSchemaForB = findSchemaForDefinition(rootWithBIncludedSchema, "leafcomputedproperty")
+
+          verifyClassRefSchema(rootWithBIncludedSchema, "a", classOf[MiddleComputedProperty])
+          verifyClassRefSchema(rootWithBIncludedSchema, "b", classOf[MiddleComputedProperty], "b:middlecomputedproperty")
+          verifyClassRefSchema(bMiddleSchema, "leaf", classOf[LeafComputedProperty], "b:leaf:leafcomputedproperty")
+          verifyProperties(bLeafSchema, "value", "leafComputedValue")
+          verifyClassRefSchema(middleSchemaForB, "leaf", classOf[LeafComputedProperty])
+          verifyProperties(leafSchemaForB, "value")
+        }
+        "creates a finite path-specific ref for self-recursive computed property owners" in {
+          val rootSchema = classSchemaOf[RootWithRecursiveComputedOwner]
+          val recursiveSchema = findSchemaForDefinition(rootSchema, "child:recursivecomputedowner")
+
+          verifyClassRefSchema(rootSchema, "child", classOf[RecursiveComputedOwner], "child:recursivecomputedowner")
+          verifyProperties(recursiveSchema, "child", "computedValue")
+          verifyClassRefSchema(recursiveSchema, "child", classOf[RecursiveComputedOwner], "child:recursivecomputedowner")
+          verifyJsonRef(rootSchema.toJson \ "properties" \ "child", "child:recursivecomputedowner")
+          verifyJsonRef(rootSchema.toJson \ "definitions" \ recursiveSchema.definitionName \ "properties" \ "child", "child:recursivecomputedowner")
+          verifyComputedStringProperty(recursiveSchema, "computedValue")
+        }
+        "includes computed properties declared on an included trait owner" in {
+          val rootSchema = classSchemaOf[RootWithTraitComputedOwner]
+          val ownerSchema = findSchemaForClass(rootSchema, classOf[TraitComputedOwnerImpl])
+
+          verifyProperties(ownerSchema, "value", "computedFromTrait")
         }
       }
       "@EnumValue" - {
@@ -270,15 +349,48 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
 
     "Title" - {
       "CamelCase to words" in {
-        ClassRefSchema("com.foo.CamelCase", Nil).title should equal("Camel case")
+        ClassRefSchema(DefinitionKey("com.foo.CamelCase")).title should equal("Camel case")
       }
 
       "Lodash (_) to dash (-)" in {
-        ClassRefSchema("foo.bar.Foo_Bar", Nil).title should equal("Foo-bar")
+        ClassRefSchema(DefinitionKey("foo.bar.Foo_Bar")).title should equal("Foo-bar")
       }
 
       "Title annotation" in {
         jsonSchemaOf(classOf[WithTitle]) should equal("""{"type":"object","properties":{},"id":"#withtitle","additionalProperties":false,"title":"Custom title"}""")
+      }
+    }
+
+    "Definition names" - {
+      "keep path segments and underscores distinct" in {
+        DefinitionKey("foo.Leaf", Some(List("a", "b"))).refValue should equal("a:b:leaf")
+        DefinitionKey("foo.Leaf", Some(List("a_b"))).refValue should equal("a_b:leaf")
+        DefinitionKey("foo.Leaf", Some(List("included"))).refValue should equal("included:leaf")
+        DefinitionKey("foo.Included_Leaf").refValue should equal("included_leaf")
+      }
+
+      "preserve unicode identifier characters" in {
+        DefinitionKey("foo.PäiväÅÖÄ123").refValue should equal("päiväåöä123")
+      }
+
+      "normalize punctuation inside a segment" in {
+        DefinitionKey("foo.Leaf", Some(List("a.b:c/d~e-f"))).refValue should equal("a_b_c_d_e_f:leaf")
+      }
+
+      "fail instead of overwriting duplicate emitted definition names" in {
+        val schema = ClassSchema(
+          DefinitionKey("root"),
+          Nil,
+          definitions = List(
+            ClassSchema(DefinitionKey("foo.Leaf", Some(List("A"))), Nil),
+            ClassSchema(DefinitionKey("foo.Leaf", Some(List("a"))), Nil)
+          )
+        )
+
+        val error = intercept[RuntimeException] {
+          schema.toJson
+        }
+        error.getMessage should include regex "(?i)duplicate.*a:leaf"
       }
     }
 
@@ -287,12 +399,12 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
         jsonSchemaOf(classOf[NestedDefinitions]) should equal("""{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"],"definitions":{"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
       }
       "Can be performed after creation for artesanal schemas" in {
-        val definitions: List[SchemaWithClassName] = List(schemaOf(classOf[NestedDefinitions]), AnyOfSchema(List(schemaOf(classOf[Booleans])), "someanyof", Nil, List(schemaOf(classOf[NestedDefinitions]))))
-        val schema = ClassSchema("test", List(Property("testprop", NumberSchema(classOf[Int]))), Nil, definitions).moveDefinitionsToTopLevel
+        val definitions: List[SchemaWithClassName] = List(schemaOf(classOf[NestedDefinitions]), AnyOfSchema(DefinitionKey("someanyof"), List(schemaOf(classOf[Booleans])), definitions = List(schemaOf(classOf[NestedDefinitions]))))
+        val schema = ClassSchema(DefinitionKey("test"), List(Property("testprop", NumberSchema(classOf[Int]))), definitions = definitions).moveDefinitionsToTopLevel
         jsonSchemaOf(schema) should equal("""{"type":"object","properties":{"testprop":{"type":"number"}},"id":"#test","additionalProperties":false,"title":"Test","required":["testprop"],"definitions":{"nesteddefinitions":{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"]},"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]},"someanyof":{"anyOf":[{"type":"object","properties":{"field":{"type":"boolean"}},"id":"#booleans","additionalProperties":false,"title":"Booleans","required":["field"]}]}}}""")
       }
       "Can be performed after creation for AnyOf schemas" in {
-        val schema = AnyOfSchema(List(schemaOf(classOf[NestedDefinitions])), "testing", Nil).moveDefinitionsToTopLevel
+        val schema = AnyOfSchema(DefinitionKey("testing"), List(schemaOf(classOf[NestedDefinitions]))).moveDefinitionsToTopLevel
         jsonSchemaOf(schema) should equal("""{"anyOf":[{"type":"object","properties":{"x":{"$ref":"#/definitions/objects"}},"id":"#nesteddefinitions","additionalProperties":false,"title":"Nested definitions","required":["x"]}],"definitions":{"objects":{"type":"object","properties":{"x":{"$ref":"#/definitions/strings"}},"id":"#objects","additionalProperties":false,"title":"Objects","required":["x"]},"strings":{"type":"object","properties":{"s":{"type":"string","minLength":1}},"id":"#strings","additionalProperties":false,"title":"Strings","required":["s"]}}}""")
       }
     }
@@ -313,6 +425,21 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
   private def findSchemaForClass(rootSchema: ClassSchema, c: Class[_]): ClassSchema =
     rootSchema.definitions.find(_.appliesToClass(c)).get.asInstanceOf[ClassSchema]
 
+  private def findSchemaForDefinition(rootSchema: ClassSchema, definitionName: String): ClassSchema =
+    rootSchema.definitions.find(_.definitionName == definitionName).get.asInstanceOf[ClassSchema]
+
+  private def verifyClassRefSchema(schema: ClassSchema, key: String, c: Class[_]): ClassRefSchema =
+    verifyClassRefSchema(schema, key, c, DefinitionKey(c.getName).refValue)
+
+  private def verifyClassRefSchema(schema: ClassSchema, key: String, c: Class[_], definitionName: String): ClassRefSchema = {
+    val propertySchema = schema.properties.find(_.key == key).get.schema
+    propertySchema shouldBe a[ClassRefSchema]
+    val classRefSchema = propertySchema.asInstanceOf[ClassRefSchema]
+    classRefSchema.fullClassName should equal(c.getName)
+    classRefSchema.definitionName should equal(definitionName)
+    classRefSchema
+  }
+
   private def verifyProperties(schema: ClassSchema, keys: String*): Unit =
     schema.properties.map(_.key) should equal(keys.toList)
 
@@ -321,6 +448,9 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
       case JObject(properties) => properties.map(_._1) should equal(keys.toList)
       case other => fail(s"Expected JSON object properties, got $other")
     }
+
+  private def verifyJsonRef(schemaJson: JValue, definitionName: String): Unit =
+    schemaJson \ "$ref" should equal(JString(s"#/definitions/$definitionName"))
 
   private def verifyComputedStringProperty(schema: ClassSchema, key: String): Unit = {
     val computedProperty = schema.properties.find(_.key == key).get

@@ -15,7 +15,7 @@ object AnyOfExtractor {
 
   private def criteriaCacheKey(schema: SchemaWithClassName)(implicit context: ExtractionContext): String = {
     def schemaKey(schema: Schema): String = schema match {
-      case schema: SchemaWithClassName => schema.fullClassName + ":" + schema.getClass.getName
+      case schema: SchemaWithClassName => s"${schema.definitionKey}:${schema.getClass.getName}"
       case _ => schema.getClass.getName
     }
 

@@ -83,6 +83,41 @@ case class RootWithMiddleComputedProperty(middle: MiddleComputedProperty) {
   def rootComputedValue: String = "root-computed-value"
 }
 
+case class ComputedOwner(value: String) {
+  @ComputedProperty
+  def computedValue: String = "computed-value"
+}
+
+@IncludeComputedProperty(classOf[ComputedOwner], "included.computedValue")
+case class RootWithTwoComputedOwnerPaths(included: ComputedOwner, notIncluded: ComputedOwner)
+
+@IncludeComputedProperty(classOf[LeafComputedProperty], "included.leaf.leafComputedValue")
+case class RootWithPathSpecificComputedLeaf(included: MiddleComputedProperty, notIncluded: MiddleComputedProperty)
+
+@IncludeComputedProperty(classOf[LeafComputedProperty], "a.leaf.leafComputedValue")
+case class RootWithComputedLeafOnPathA(a: MiddleComputedProperty, b: MiddleComputedProperty)
+
+@IncludeComputedProperty(classOf[LeafComputedProperty], "b.leaf.leafComputedValue")
+case class RootWithComputedLeafOnPathB(a: MiddleComputedProperty, b: MiddleComputedProperty)
+
+case class RecursiveComputedOwner(child: RecursiveComputedOwner) {
+  @ComputedProperty
+  def computedValue: String = "computed-value"
+}
+
+@IncludeComputedProperty(classOf[RecursiveComputedOwner], "child.computedValue")
+case class RootWithRecursiveComputedOwner(child: RecursiveComputedOwner)
+
+trait TraitComputedOwner {
+  @ComputedProperty
+  def computedFromTrait: String = "computed-from-trait"
+}
+
+case class TraitComputedOwnerImpl(value: String) extends TraitComputedOwner
+
+@IncludeComputedProperty(classOf[TraitComputedOwner], "computedFromTrait")
+case class RootWithTraitComputedOwner(owner: TraitComputedOwnerImpl)
+
 trait TraitWithSyntheticProperties {
   @SyntheticProperty
   @Description("synthetic field")

@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/Opetushallitus/scala-schema/actions/workflows/tests.yml/badge.svg?branch=scala-2.13)](https://github.com/Opetushallitus/scala-schema/actions/workflows/tests.yml)
 
-Generate a [JSON schema](http://json-schema.org/) from Scala classes 
+Generate a [JSON schema](http://json-schema.org/) from Scala classes
 
 - Create a Schema object from any `case class`
 - Export the schema as JSON
@@ -94,6 +94,10 @@ case class Cat(name: String) {
 @IncludeComputedProperty(classOf[Cat], "displayName")
 case class CatResponse(cat: Cat)
 ```
+
+The `@IncludeComputedProperty` selector can also be a dot-separated path suffix in root-to-leaf order. The last segment is
+the computed property name, so `"cat.displayName"` includes `displayName` only when the owner class is reached through a
+path ending in `cat`.
 
 Computed properties included with `@IncludeComputedProperty` are serialized and shown in generated JSON Schema, but
 remain optional because they are output-only fields. During extraction and deserialization, input JSON values for
@@ -217,9 +221,9 @@ object SerializationExample extends App {
   val stringValue: String = JsonMethods.pretty(serialized)
   println(stringValue)
   /*
-  
+
   Output:
-  
+
   {
       "animals": [
           {
@@ -242,10 +246,10 @@ Now that you've read this far, I'll share some thoughts on schemas and factories
 
 A `Schema` represents your object model and can be exported as a JSON schema as described above. Schemas are typically created
 automatically from your case classes using a `SchemaFactory`. As shown above, you can use annotations to customize how a schema is created,
-and also pass information about your custom annotations to your `SchemaFactory`. 
+and also pass information about your custom annotations to your `SchemaFactory`.
 
 The factory will *cache the created schemas* so that
-subsequent requests for a certain schema will be super fast. Therefore you should store your schema factory in a variable, 
+subsequent requests for a certain schema will be super fast. Therefore you should store your schema factory in a variable,
 but you don't need to store the individual schemas.
 
 ### Examples of matching multiple case classes
@@ -274,7 +278,7 @@ If there are multiple case classes with no annotations, the deserialising throws
 
 The `scala-schema` library is currently maintained for Scala 2.13 on the `scala-2.13` branch.
 
-It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to 
+It cannot be found in a Maven repository at the moment, but you can use [Jitpack.io](https://jitpack.io/) to
 depend on it anyway. Just follow the instructions below.
 
 #### Maven
@@ -299,7 +303,7 @@ Then add scala-schema as dependency
   <dependency>
     <groupId>com.github.Opetushallitus</groupId>
     <artifactId>scala-schema</artifactId>
-    <version>2.43.0_2.13</version>
+    <version>2.44.0_2.13</version>
   </dependency>
 </dependencies>
 ```
@@ -312,7 +316,7 @@ Add Jitpack.io resolver:
 
 Then add scala-schema as dependency (use appropriate scala version suffix as below)
 
-    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.43.0_2.13"
+    libraryDependencies += "com.github.Opetushallitus" % "scala-schema" % "2.44.0_2.13"
 
 ### Developing scala-schema
 
@@ -321,7 +325,7 @@ Project is built and tested with Maven Wrapper. So `./mvnw install` will do the 
 The active development branch is `scala-2.13`.
 
 A new "release" is created simply by tagging. For instance, to release the current head as version 2.42.0
-for Scala 2.13, you would do `git tag 2.42.0_2.13 && git push origin 2.42.0_2.13`.
+for Scala 2.13, you would do `git tag 2.45.0_2.13 && git push origin 2.45.0_2.13`.
 
 ### TODO
 

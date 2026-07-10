@@ -3,6 +3,8 @@ package fi.oph.scalaschema
 import fi.oph.scalaschema.annotation.{EnumValue, ReadFlattened, Title}
 import org.json4s.JsonAST.JValue
 
+import java.util.Locale
+
 sealed trait Schema {
   def metadata: List[Metadata] = Nil
   def mapItems(f: ElementSchema => ElementSchema): Schema
@@ -50,9 +52,36 @@ case class DateSchema(dateType: Class[_]) extends SimpleSchema
 case class StringSchema(enumValues: Option[List[String]] = None) extends SimpleSchema
 case class BooleanSchema(enumValues: Option[List[Boolean]] = None) extends SimpleSchema
 case class NumberSchema(numberType: Class[_], enumValues: Option[List[Number]] = None) extends SimpleSchema
-case class ClassSchema(fullClassName: String, properties: List[Property], override val metadata: List[Metadata] = Nil, definitions: List[SchemaWithClassName] = Nil, specialized: Boolean = false, readFlattened: Option[FlattenedSchema] = None)
-                       extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
+case class DefinitionKey(fullClassName: String, variantQualifier: Option[List[String]] = None) {
+  def refValue: String =
+    (variantQualifier.getOrElse(Nil) :+ DefinitionKey.simpleName(fullClassName))
+      .map(DefinitionKey.sanitizeForRef)
+      .mkString(DefinitionKey.RefSeparator)
+}
 
+object DefinitionKey {
+  private val RefSeparator = ":"
+
+  // JSON Schema definition ref parts support Unicode letters, decimal digits and underscores.
+  // Other characters are normalized to underscores.
+  private val UnsupportedRefCharacter = """[^\p{L}\p{Nd}_]""".r
+
+  private def simpleName(fullClassName: String): String =
+    fullClassName.split("\\.").toList.last
+
+  private def sanitizeForRef(part: String): String =
+    UnsupportedRefCharacter.replaceAllIn(part.toLowerCase(Locale.ROOT), "_")
+}
+
+case class ClassSchema(
+  override val definitionKey: DefinitionKey,
+  properties: List[Property],
+  override val metadata: List[Metadata] = Nil,
+  definitions: List[SchemaWithClassName] = Nil,
+  specialized: Boolean = false,
+  readFlattened: Option[FlattenedSchema] = None
+)
+                       extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[ClassSchema] {
   def getPropertyValue(property: Property, target: AnyRef): AnyRef = {
     val keyWithScalaNameEncoding = scala.reflect.NameTransformer.encode(property.key)
     target.getClass.getMethod(keyWithScalaNameEncoding).invoke(target)
@@ -82,15 +111,24 @@ case class ClassSchema(fullClassName: String, properties: List[Property], overri
 
   override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 
-  lazy val asAnyOfSchema = AnyOfSchema(this.copy(readFlattened = None) :: readFlattened.toList, fullClassName, Nil, Nil)
+  lazy val asAnyOfSchema = AnyOfSchema(definitionKey, this.copy(readFlattened = None) :: readFlattened.toList)
 }
 
-case class ClassRefSchema(fullClassName: String, override val metadata: List[Metadata]) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
+case class ClassRefSchema(override val definitionKey: DefinitionKey, override val metadata: List[Metadata] = Nil) extends ElementSchema with SchemaWithClassName with ObjectWithMetadata[ClassRefSchema] {
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
-  def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchema(fullClassName)
+
+  @deprecated("Root-blind ClassRefSchema resolution can lose root-specific schema variants. Use resolve(factory, rootSchema) when resolving a ref from a root schema.", "2.44.0_2.13")
+  def resolve(factory: SchemaFactory): SchemaWithClassName = factory.createSchemaWithoutRootSchema(this)
+
   override def resolve(factory: SchemaFactory, rootSchema: Schema): SchemaWithClassName = factory.createSchema(this, rootSchema)
 }
-case class AnyOfSchema(alternatives: List[SchemaWithClassName], fullClassName: String, override val metadata: List[Metadata], definitions: List[SchemaWithClassName] = Nil) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
+
+case class AnyOfSchema(
+  override val definitionKey: DefinitionKey,
+  alternatives: List[SchemaWithClassName],
+  override val metadata: List[Metadata] = Nil,
+  definitions: List[SchemaWithClassName] = Nil
+) extends ElementSchema with SchemaWithDefinitions with ObjectWithMetadata[AnyOfSchema] {
   if (alternatives.isEmpty) throw new RuntimeException("AnyOfSchema needs at least one alternative")
   def withDefinitions(definitions: List[SchemaWithClassName]) = this.copy(definitions = definitions)
   def replaceMetadata(metadata: List[Metadata]) = copy(metadata = metadata)
@@ -123,7 +161,7 @@ case class FlattenedSchema(classSchema: ClassSchema, property: Property) extends
     classSchema.getPropertyValue(property, target)
   }
 
-  override def fullClassName: String = classSchema.fullClassName
+  override def definitionKey: DefinitionKey = classSchema.definitionKey
 
   override def resolve(factory: SchemaFactory): SchemaWithClassName = this
 }
@@ -144,10 +182,10 @@ sealed trait SchemaWithDefinitions extends SchemaWithClassName {
   // configuration. Resolving the class ref directly through SchemaFactory would use the
   // referenced class as its own root schema and lose that configuration.
   private[scalaschema] def findSchemaForClassRef(classRef: ClassRefSchema): Option[SchemaWithClassName] = {
-    if (fullClassName == classRef.fullClassName) {
+    if (definitionKey == classRef.definitionKey) {
       Some(this)
     } else {
-      definitions.find(_.fullClassName == classRef.fullClassName)
+      definitions.find(_.definitionKey == classRef.definitionKey)
     }
   }
 
@@ -158,7 +196,9 @@ sealed trait SchemaWithDefinitions extends SchemaWithClassName {
 }
 
 sealed trait SchemaWithClassName extends Schema {
-  def fullClassName: String
+  def definitionKey: DefinitionKey
+  def fullClassName: String = definitionKey.fullClassName
+  def definitionName: String = definitionKey.refValue
   def simpleName: String = {
     simpleClassName.toLowerCase
   }
