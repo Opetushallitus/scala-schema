@@ -71,7 +71,7 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
         jsonSchemaPropertiesOf(classOf[Arrays]) should equal("""{"things":{"type":"array","items":{"type":"number"}}}""")
       }
       "List accepting single value as array" in {
-        jsonSchemaPropertiesOf(classOf[ListsWithSingleValueAsArray]) should equal("""{"things":{"type":"array","items":{"type":"number"},"description":"(when deserializing also accepts a single value)"}}""")
+        jsonSchemaPropertiesOf(classOf[ListsWithSingleValueAsArray]) should equal("""{"things":{"type":"array","items":{"type":"number"},"acceptsSingleValue":true,"description":"(when deserializing also accepts a single value)"}}""")
       }
     }
     "Maps" in {
@@ -108,7 +108,7 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
     "Annotations" - {
       "@DefaultValue" - {
         "Fields with @DefaultValue are treated as non-required" in {
-          jsonSchemaOf(classOf[BooleansWithDefault]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"(default value: true)"}},"id":"#booleanswithdefault","additionalProperties":false,"title":"Booleans with default"}""")
+          jsonSchemaOf(classOf[BooleansWithDefault]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","default":"true","description":"(default value: true)"}},"id":"#booleanswithdefault","additionalProperties":false,"title":"Booleans with default"}""")
         }
       }
       "@Description" - {
@@ -151,13 +151,13 @@ class JsonSchemaTest extends AnyFreeSpec with Matchers {
       }
       "@SyntheticProperty" - {
         "for method in case class" in {
-          jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field1":{"type":"boolean"},"field2":{"type":"array","items":{"type":"boolean"}}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
+          jsonSchemaOf(classOf[WithSyntheticProperties]) should equal("""{"type":"object","properties":{"field1":{"type":"boolean","synthetic":true},"field2":{"type":"array","items":{"type":"boolean"},"synthetic":true}},"id":"#withsyntheticproperties","additionalProperties":false,"title":"With synthetic properties"}""")
         }
         "for method in trait" in {
-          jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")
+          jsonSchemaOf(classOf[WithTraitWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field","synthetic":true}},"id":"#withtraitwithsyntheticproperties","additionalProperties":false,"title":"With trait with synthetic properties"}""")
         }
         "for complex hierarchy of traits" in {
-          jsonSchemaOf(classOf[WithComplexHierarchyOfTraitsWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withcomplexhierarchyoftraitswithsyntheticproperties","additionalProperties":false,"title":"With complex hierarchy of traits with synthetic properties"}""")
+          jsonSchemaOf(classOf[WithComplexHierarchyOfTraitsWithSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field","synthetic":true}},"id":"#withcomplexhierarchyoftraitswithsyntheticproperties","additionalProperties":false,"title":"With complex hierarchy of traits with synthetic properties"}""")
         }
         "for method in trait overridden by val" in {
           jsonSchemaOf(classOf[WithOverriddenSyntheticProperties]) should equal("""{"type":"object","properties":{"field":{"type":"boolean","description":"synthetic field"}},"id":"#withoverriddensyntheticproperties","additionalProperties":false,"title":"With overridden synthetic properties","required":["field"]}""")

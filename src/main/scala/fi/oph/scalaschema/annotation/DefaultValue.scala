@@ -1,7 +1,7 @@
 package fi.oph.scalaschema.annotation
 
 import fi.oph.scalaschema.Metadata
-import org.json4s.JsonAST.JObject
+import org.json4s.JsonAST.{JObject, JString}
 
 case class DefaultValue(value: Any) extends Metadata {
   override def appendMetadataToJsonSchema(obj: JObject) = {
@@ -9,7 +9,7 @@ case class DefaultValue(value: Any) extends Metadata {
       case v: Option[_] => v.map(_.toString).getOrElse("null")
       case v: Any => v
     }
-    appendToDescription(obj, s"(default value: ${display})")
+    appendToDescription(obj.merge(JObject("default" -> JString(display.toString))), s"(default value: ${display})")
   }
 }
 

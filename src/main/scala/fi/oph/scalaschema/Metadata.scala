@@ -2,7 +2,7 @@ package fi.oph.scalaschema
 
 import fi.oph.scalaschema.annotation.EnumValue
 import org.json4s.JsonAST
-import org.json4s.JsonAST.{JNothing, JObject, JString}
+import org.json4s.JsonAST.{JArray, JNothing, JObject, JString}
 
 import scala.annotation.StaticAnnotation
 
@@ -34,6 +34,15 @@ trait JsonMetadataSupport {
 
   def addEnumValue(value: Any, p: Property): Property = {
     p.copy(schema = EnumValue.addEnumValues(p.schema, List(value)))
+  }
+
+  // Appends a string to a JSON array field, accumulating across multiple annotations.
+  def appendToStringArray(obj: JObject, key: String, value: String): JObject = {
+    val existing = obj.\(key) match {
+      case JArray(a) => a
+      case _ => Nil
+    }
+    JObject(obj.obj.filterNot(_._1 == key) :+ (key -> JArray(existing :+ JString(value))))
   }
 }
 
